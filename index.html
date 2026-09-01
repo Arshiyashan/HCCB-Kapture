@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCCB — Report a Product Issue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --coke-red:#E30016;
+    --coke-red-dark:#A30010;
+    --coke-red-tint:#FDECEA;
+    --ink:#141212;
+    --black-panel:#0E0C0C;
+    --black-panel-soft:#1C1817;
+    --grey-700:#4A4A4A;
+    --grey-500:#838383;
+    --grey-300:#D3D2D2;
+    --grey-150:#F1F1F1;
+    --grey-100:#F8F8F8;
+    --input-border:#918F90;
+    --white:#FFFFFF;
+    --success:#146C2E;
+    --success-tint:#E8F5EC;
+    --danger:#A30010;
+    --brand-gradient: linear-gradient(100deg, #FF1F2E 0%, #E30016 32%, #7A0009 68%, #1C1817 100%);
+    --btn-gradient: linear-gradient(120deg, #FF2A2A 0%, #E30016 55%, #A30010 100%);
+    --radius-s:3px;
+    --radius-m:8px;
+    --shadow-panel: 0 24px 60px rgba(0,0,0,0.14);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    color:var(--ink);
+    background:var(--grey-100);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  h1,h2,h3{font-family:'Fredoka',sans-serif;margin:0;}
+  button{font-family:inherit;}
+
+  .page{
+    min-height:100vh;
+    display:flex;
+    align-items:stretch;
+  }
+
+  /* ---------- Brand panel ---------- */
+  .brand-panel{
+    position:relative;
+    flex:0 0 38%;
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(227,0,22,0.35) 0%, rgba(227,0,22,0) 55%),
+      radial-gradient(90% 70% at 0% 100%, rgba(227,0,22,0.18) 0%, rgba(227,0,22,0) 60%),
+      linear-gradient(160deg, var(--black-panel-soft) 0%, var(--black-panel) 60%);
+    color:var(--white);
+    padding:56px 48px 40px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    overflow:hidden;
+  }
+  .brand-panel .rings{
+    position:absolute;
+    top:-90px; right:-90px;
+    width:280px; height:280px;
+    border-radius:50%;
+    border:26px solid rgba(227,0,22,0.22);
+  }
+  .brand-panel .rings::after{
+    content:"";
+    position:absolute;
+    top:60px; left:60px;
+    width:160px; height:160px;
+    border-radius:50%;
+    border:16px solid rgba(255,255,255,0.09);
+  }
+  .brand-mark{
+    font-family:'Fredoka',sans-serif;
+    font-weight:800;
+    font-size:22px;
+    letter-spacing:0.5px;
+    position:relative;
+    z-index:1;
+    color:var(--white);
+  }
+  .brand-mark span{color:var(--white); background:var(--coke-red); padding:3px 10px; border-radius:20px; margin-left:4px; font-size:14px; vertical-align:2px;}
+  .brand-copy{position:relative; z-index:1;}
+  .brand-copy h1{
+    font-size:34px;
+    line-height:1.18;
+    margin-bottom:18px;
+    max-width:360px;
+    color:var(--white);
+  }
+  .brand-copy p{
+    font-size:15.5px;
+    color:rgba(255,255,255,0.68);
+    max-width:340px;
+    margin-bottom:26px;
+  }
+  .reassure-list{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px;}
+  .reassure-list li{
+    display:flex; gap:12px; align-items:flex-start;
+    font-size:14px; color:rgba(255,255,255,0.82);
+  }
+  .reassure-list .dot{
+    flex:0 0 8px; width:8px; height:8px; border-radius:50%;
+    background:var(--coke-red); margin-top:6px;
+    box-shadow:0 0 0 3px rgba(227,0,22,0.25);
+  }
+  .brand-wave{position:relative; z-index:1; height:4px; border-radius:2px; overflow:hidden; background:var(--brand-gradient);}
+  .brand-foot{
+    position:relative; z-index:1;
+    font-size:12.5px; color:rgba(255,255,255,0.45);
+    margin-top:14px;
+  }
+
+  /* ---------- Form panel ---------- */
+  .form-panel{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    padding:48px 24px;
+    overflow-y:auto;
+  }
+  .form-shell{
+    width:100%;
+    max-width:560px;
+  }
+  .form-card{
+    background:var(--white);
+    border:1px solid var(--grey-150);
+    border-radius:var(--radius-m);
+    box-shadow:var(--shadow-panel);
+    padding:36px 36px 30px;
+  }
+  .form-card h2{
+    font-size:22px;
+    margin-bottom:4px;
+  }
+  .form-sub{
+    color:var(--grey-500);
+    font-size:14px;
+    margin-bottom:26px;
+  }
+
+  /* Stepper */
+  .stepper{
+    display:flex;
+    align-items:center;
+    margin-bottom:30px;
+  }
+  .stepper .seg{
+    display:flex; align-items:center; flex:1;
+  }
+  .stepper .node{
+    width:28px; height:28px;
+    border-radius:50%;
+    background:var(--grey-150);
+    color:var(--grey-500);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700;
+    flex:0 0 28px;
+    transition:background .25s ease, color .25s ease;
+  }
+  .stepper .node.active,
+  .stepper .node.done{background:var(--coke-red); color:var(--white);}
+  .stepper .line{
+    flex:1; height:2px; background:var(--grey-150); margin:0 6px;
+    transition:background .25s ease;
+  }
+  .stepper .line.done{background:var(--coke-red);}
+  .stepper .label-row{display:flex; margin-bottom:30px; margin-top:-22px;}
+  .stepper-labels{display:flex; justify-content:space-between; font-size:11.5px; color:var(--grey-500); margin-top:6px; margin-bottom:24px;}
+  .stepper-labels span{flex:1; text-align:center;}
+  .stepper-labels span:first-child{text-align:left;}
+  .stepper-labels span:last-child{text-align:right;}
+  .stepper-labels span.active{color:var(--ink); font-weight:600;}
+
+  fieldset{border:none; padding:0; margin:0;}
+  .field{margin-bottom:20px;}
+  .field label{
+    display:block;
+    font-size:13.5px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--ink);
+  }
+  .field label .opt{font-weight:400; color:var(--grey-500);}
+  .field label .req{color:var(--coke-red); margin-left:2px;}
+  .hint{font-size:12px; color:var(--grey-500); margin-top:5px;}
+  .hint.err-emphasis{color:var(--danger); font-weight:600;}
+  .error-text{font-size:12.5px; color:var(--danger); margin-top:6px; display:none;}
+  .field.invalid .error-text{display:block;}
+  .field.invalid input,
+  .field.invalid select,
+  .field.invalid textarea{border-color:var(--danger) !important; background:#FFF7F7;}
+  .field.needs-contact input{border-color:var(--danger) !important; background:#FFF7F7;}
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  select,
+  textarea{
+    width:100%;
+    padding:13px 14px;
+    font-size:14.5px;
+    border:1.5px solid var(--input-border);
+    border-radius:var(--radius-s);
+    background:var(--white);
+    color:var(--ink);
+    font-family:inherit;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input:disabled, select:disabled{background:var(--grey-100); color:var(--grey-500);}
+  input[readonly]{background:var(--grey-100);}
+  input:focus, select:focus, textarea:focus{
+    outline:none;
+    border-color:var(--coke-red);
+    box-shadow:0 0 0 3px rgba(227,0,22,0.12);
+  }
+  textarea{resize:vertical; min-height:90px;}
+  ::placeholder{color:var(--grey-500); opacity:1;}
+
+
+  .inline-row{display:flex; gap:10px;}
+  .inline-row > *{flex:1;}
+
+  /* radio group ("Are you a?") */
+  .radio-group{display:flex; flex-wrap:wrap; gap:8px 26px;}
+  .radio-option{
+    display:flex; align-items:center; gap:10px;
+    font-size:14.5px; font-weight:500; color:var(--ink);
+    cursor:pointer; padding:8px 2px; position:relative;
+  }
+  .radio-option input{position:absolute; opacity:0; width:0; height:0;}
+  .radio-dot{
+    width:19px; height:19px; flex:none; border-radius:50%;
+    border:2px solid var(--input-border); position:relative;
+    display:inline-block;
+    transition:border-color .15s ease;
+  }
+  .radio-option:hover .radio-dot{border-color:var(--ink);}
+  .radio-option input:checked ~ .radio-dot{border-color:var(--coke-red);}
+  .radio-option input:checked ~ .radio-dot::after{
+    content:""; position:absolute; top:3px; left:3px; width:9px; height:9px;
+    border-radius:50%; background:var(--coke-red);
+  }
+  .radio-option input:focus-visible ~ .radio-dot{outline:2px solid var(--coke-red); outline-offset:2px;}
+  .field.invalid .radio-dot{border-color:var(--danger);}
+
+  .phone-row{display:flex; gap:10px;}
+  .phone-row input{flex:1;}
+  .btn-ghost-sm{
+    flex:0 0 auto;
+    padding:0 16px;
+    border-radius:var(--radius-s);
+    border:1.5px solid var(--coke-red);
+    background:var(--white);
+    color:var(--coke-red);
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:background .15s ease;
+  }
+  .btn-ghost-sm:hover{background:var(--coke-red-tint);}
+  .btn-ghost-sm:disabled{opacity:.45; cursor:not-allowed;}
+
+  .otp-block{
+    margin-top:12px;
+    padding:14px;
+    background:var(--grey-100);
+    border-radius:var(--radius-s);
+    display:none;
+  }
+  .otp-block.show{display:block;}
+  .otp-block .otp-row{display:flex; gap:10px; align-items:center;}
+  .otp-block input{flex:0 0 140px; letter-spacing:4px; font-weight:600; text-align:center;}
+  .otp-hint{font-size:11.5px; color:var(--grey-500); margin-top:8px;}
+  .resend{background:none; border:none; color:var(--coke-red); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; margin-top:8px;}
+  .resend:disabled{color:var(--grey-500); cursor:default;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:20px;
+  }
+  .badge.verified{background:var(--success-tint); color:var(--success);}
+  .badge.info{background:var(--grey-150); color:var(--grey-700);}
+  .badge svg{width:12px; height:12px;}
+
+  .id-format-note{font-size:12px; margin-top:6px;}
+  .id-format-note.ok{color:var(--success);}
+  .id-format-note.bad{color:var(--grey-500);}
+
+  /* File upload */
+  .upload-box{
+    border:1.5px dashed var(--grey-300);
+    border-radius:var(--radius-s);
+    padding:18px;
+    text-align:center;
+    cursor:pointer;
+    background:var(--grey-100);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .upload-box:hover{border-color:var(--coke-red); background:var(--coke-red-tint);}
+  .upload-box input{display:none;}
+  .upload-box .icon{font-size:22px; margin-bottom:6px;}
+  .upload-box .main-txt{font-size:13.5px; font-weight:600;}
+  .upload-box .sub-txt{font-size:12px; color:var(--grey-500); margin-top:2px;}
+  .preview-row{
+    display:flex; align-items:center; gap:12px;
+    margin-top:12px; padding:10px 12px;
+    background:var(--grey-100); border-radius:var(--radius-s);
+  }
+  .preview-row img{width:52px; height:52px; object-fit:cover; border-radius:6px; border:1px solid var(--grey-300);}
+  .preview-row .meta{flex:1; font-size:12.5px; color:var(--grey-700); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .preview-row button{
+    background:none; border:none; color:var(--coke-red); font-weight:600;
+    font-size:12.5px; cursor:pointer;
+  }
+
+  .batch-attempts{font-size:12px; color:var(--grey-500); margin-top:6px;}
+
+  /* ---------- Brand & size: creative two-tier picker ---------- */
+  .brand-chip-row{display:flex; flex-wrap:wrap; gap:9px; margin-bottom:10px;}
+  .brand-chip{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 15px; border-radius:20px; border:1.5px solid var(--grey-300);
+    background:var(--white); font-size:13px; font-weight:600; color:var(--ink);
+    cursor:pointer; transition:all .15s ease; user-select:none;
+  }
+  .brand-chip .sw{width:10px; height:10px; border-radius:50%; flex:none;}
+  .brand-chip:hover{border-color:var(--coke-red); transform:translateY(-1px);}
+  .brand-chip.active{
+    background:var(--ink); border-color:var(--ink); color:var(--white);
+    box-shadow:0 8px 16px -8px rgba(0,0,0,0.4);
+  }
+  .brand-chip.active .sw{box-shadow:0 0 0 2px rgba(255,255,255,0.5);}
+
+  .size-chip-row{
+    display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;
+    padding:12px; background:var(--grey-100); border-radius:var(--radius-m);
+    animation:sizeIn .18s ease;
+  }
+  @keyframes sizeIn{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);} }
+  .size-chip{
+    padding:8px 16px; border-radius:16px; border:1.5px solid var(--grey-300);
+    background:var(--white); font-size:13px; font-weight:600; color:var(--ink);
+    cursor:pointer; transition:all .15s ease;
+  }
+  .size-chip:hover{border-color:var(--coke-red); color:var(--coke-red);}
+  .size-chip.active{background:var(--coke-red); border-color:var(--coke-red); color:var(--white);}
+
+  .combo{position:relative;}
+  .combo-input{
+    display:flex; align-items:center; gap:9px;
+    border:1.5px solid var(--input-border); border-radius:var(--radius-s);
+    background:var(--white); padding:0 14px;
+  }
+  .combo-input:focus-within{border-color:var(--coke-red); box-shadow:0 0 0 3px rgba(227,0,22,0.12);}
+  .combo-swatch{width:11px; height:11px; border-radius:50%; flex:none;}
+  .combo-input input{border:none; padding:13px 0; flex:1; min-width:0;}
+  .combo-input input:focus{outline:none; box-shadow:none;}
+  .combo-clear{
+    flex:none; width:20px; height:20px; border-radius:50%; background:var(--grey-150);
+    color:var(--grey-700); font-size:11px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .combo-clear:hover{background:var(--grey-300);}
+  .combo-panel{
+    position:absolute; left:0; right:0; top:calc(100% + 6px);
+    background:var(--white); border:1px solid var(--grey-150); border-radius:var(--radius-m);
+    box-shadow:var(--shadow-panel); max-height:230px; overflow-y:auto; z-index:25; display:none;
+  }
+  .combo-panel.open{display:block;}
+  .combo-opt{display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:13.5px; cursor:pointer;}
+  .combo-opt .sw{width:9px; height:9px; border-radius:50%; flex:none;}
+  .combo-opt b{font-weight:600;}
+  .combo-opt span.size-tag{margin-left:auto; font-size:11.5px; color:var(--grey-500); background:var(--grey-100); padding:2px 8px; border-radius:10px;}
+  .combo-opt:hover, .combo-opt.hi{background:var(--coke-red-tint);}
+  .combo-empty{padding:12px 14px; font-size:13px; color:var(--grey-500);}
+  .batch-fallback{
+    display:none;
+    margin-top:12px; padding:14px;
+    background:var(--grey-100); border-radius:var(--radius-s);
+  }
+  .batch-fallback.show{display:block;}
+  .batch-fallback p{margin:0 0 10px; font-size:13.5px; font-weight:600; color:var(--ink);}
+  .batch-fallback .choice-row{display:flex; gap:10px;}
+  .batch-fallback .choice-row button{
+    flex:1; padding:10px 14px;
+    border-radius:var(--radius-s); font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+  .btn-choice-yes{background:var(--white); border:1.5px solid var(--input-border); color:var(--ink);}
+  .btn-choice-yes:hover{border-color:var(--ink);}
+  .btn-choice-no{background:var(--white); border:1.5px solid var(--coke-red); color:var(--coke-red);}
+  .btn-choice-no:hover{background:var(--coke-red-tint);}
+  .batch-revert{background:none; border:none; color:var(--coke-red); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; margin-top:10px;}
+  .word-counter{font-size:12px; color:var(--grey-500); text-align:right; margin-top:5px;}
+  .word-counter.limit{color:var(--danger); font-weight:600;}
+
+  .btn-row{display:flex; gap:12px; margin-top:28px;}
+  .btn-primary{
+    flex:1;
+    background:var(--btn-gradient);
+    color:var(--white);
+    border:none;
+    padding:14px 20px;
+    border-radius:var(--radius-s);
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    box-shadow:0 14px 28px -12px rgba(163,0,16,0.55);
+    transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  }
+  .btn-primary:hover{transform:translateY(-1px); box-shadow:0 18px 32px -12px rgba(163,0,16,0.62); filter:brightness(1.04);}
+  .btn-primary:active{transform:translateY(0); filter:brightness(0.98);}
+  .btn-primary:disabled{opacity:.5; cursor:not-allowed; box-shadow:none; transform:none;}
+  .btn-secondary{
+    flex:0 0 auto;
+    background:var(--white);
+    border:1.5px solid var(--ink);
+    color:var(--ink);
+    padding:14px 20px;
+    border-radius:var(--radius-s);
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .btn-secondary:hover{background:var(--grey-100);}
+
+  .form-footnote{font-size:11.5px; color:var(--grey-500); text-align:center; margin-top:16px;}
+  .submit-error-msg{font-size:12.5px; color:var(--danger); text-align:center; margin-top:12px;}
+
+  #fld-consent .consent-row{
+    display:flex; align-items:flex-start; gap:12px;
+    cursor:pointer; font-weight:400; margin-bottom:0;
+  }
+  .consent-row input[type="checkbox"]{
+    position:absolute; opacity:0; width:0; height:0;
+  }
+  .consent-box{
+    flex:0 0 22px; width:22px; height:22px;
+    border:2.5px solid var(--coke-red);
+    border-radius:2px;
+    background:var(--white);
+    position:relative;
+    margin-top:1px;
+  }
+  .consent-row input:checked ~ .consent-box::after{
+    content:"";
+    position:absolute; left:5px; top:1px;
+    width:7px; height:12px;
+    border:solid var(--coke-red);
+    border-width:0 2.5px 2.5px 0;
+    transform:rotate(45deg);
+  }
+  .consent-row input:focus-visible ~ .consent-box{outline:2px solid var(--ink); outline-offset:2px;}
+  .consent-text{font-size:14px; color:var(--ink); line-height:1.4;}
+  #fld-consent.invalid .consent-box{border-color:var(--danger);}
+  #fld-consent .error-text{margin-left:34px;}
+
+  /* Success screen */
+  .success-card{display:none; text-align:center; padding:20px 6px;}
+  .success-card.show{display:block;}
+  .success-icon{
+    width:64px; height:64px; border-radius:50%;
+    background:var(--success-tint); color:var(--success);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 20px; font-size:30px;
+  }
+  .success-card h2{margin-bottom:8px;}
+  .success-card p{color:var(--grey-700); font-size:14.5px; max-width:380px; margin:0 auto 18px;}
+  .ref-box{
+    display:inline-block; background:var(--grey-100); border:1.5px dashed var(--coke-red);
+    border-radius:var(--radius-s); padding:10px 18px; font-weight:700; letter-spacing:0.5px;
+    margin-bottom:22px; font-family:'Fredoka',sans-serif; color:var(--coke-red-dark);
+  }
+
+
+  [hidden]{display:none !important;}
+
+  @media (max-width: 900px){
+    .page{flex-direction:column;}
+    .brand-panel{
+      flex:0 0 auto;
+      padding:32px 24px 60px;
+    }
+    .brand-copy h1{font-size:26px; max-width:100%;}
+    .brand-copy p{max-width:100%;}
+    .reassure-list{display:none;}
+    .form-panel{padding:0;}
+    .form-shell{max-width:100%; margin-top:-34px;}
+    .form-card{border-radius:16px 16px 0 0; padding:28px 20px 26px;}
+  }
+  @media (max-width: 480px){
+    .form-card{padding:22px 16px 24px;}
+    .otp-block input{flex:0 0 110px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- BRAND PANEL -->
+  <div class="brand-panel">
+    <div class="rings" aria-hidden="true"></div>
+    <div class="brand-mark">HCCB <span>Care</span></div>
+
+    <div class="brand-copy">
+      <h1>Tell us what went wrong. We'll take it from here.</h1>
+      <p>Found an issue with a Coca‑Cola, Thums Up, Sprite or any HCCB product? A quick report helps us trace the batch and fix it fast.</p>
+      <ul class="reassure-list">
+        <li><span class="dot"></span> Takes under 3 minutes</li>
+        <li><span class="dot"></span> Your batch code helps us pinpoint the issue</li>
+        <li><span class="dot"></span> You'll get a reference number to track it</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="brand-wave" aria-hidden="true"></div>
+      <div class="brand-foot">Hindustan Coca‑Cola Beverages Pvt. Ltd.</div>
+    </div>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="form-panel">
+    <div class="form-shell">
+
+      <div class="form-card">
+
+        <!-- FORM (steps) -->
+        <div id="formWrap">
+          <h2>Report a product issue</h2>
+          <p class="form-sub" id="stepSubtext">Step 1 of 3 — a few details about you</p>
+
+          <div class="stepper" aria-hidden="true">
+            <div class="node active" data-node="1">1</div>
+            <div class="line" data-line="1"></div>
+            <div class="node" data-node="2">2</div>
+            <div class="line" data-line="2"></div>
+            <div class="node" data-node="3">3</div>
+          </div>
+          <div class="stepper-labels">
+            <span class="active" data-label="1">Your details</span>
+            <span data-label="2">Product info</span>
+            <span data-label="3">Issue details</span>
+          </div>
+
+          <form id="issueForm" novalidate>
+
+            <!-- STEP 1 -->
+            <div class="step" data-step="1">
+
+              <div class="field" id="fld-name">
+                <label for="fullName">Name <span class="req">*</span></label>
+                <input type="text" id="fullName" name="fullName" required placeholder="Your full name">
+                <div class="error-text">Please enter your name.</div>
+              </div>
+
+              <div class="field" id="fld-phone">
+                <label for="phone">Phone number <span class="req" id="phoneReqMark">*</span><span class="opt" id="phoneOptMark" hidden>(optional)</span></label>
+                <div class="phone-row">
+                  <input type="tel" id="phone" name="phone" inputmode="numeric" maxlength="10" placeholder="10‑digit mobile number">
+                  <button type="button" class="btn-ghost-sm" id="sendOtpBtn" disabled>Send OTP</button>
+                </div>
+                <div class="error-text">Enter a valid 10‑digit phone number.</div>
+
+                <div class="otp-block" id="otpBlock">
+                  <label for="otp" style="margin-bottom:8px;">Enter the 6‑digit code</label>
+                  <div class="otp-row">
+                    <input type="text" id="otp" inputmode="numeric" maxlength="6" placeholder="••••••">
+                    <button type="button" class="btn-ghost-sm" id="verifyOtpBtn">Verify</button>
+                    <span class="badge verified" id="verifiedBadge" hidden>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+                      Verified
+                    </span>
+                  </div>
+                  <div class="otp-hint" id="otpMsg">Demo mode — use code <strong>123456</strong> to verify. (Live SMS delivery goes live once the SMS vendor is connected.)</div>
+                  <button type="button" class="resend" id="resendBtn">Resend code</button>
+                </div>
+              </div>
+
+              <div class="field" id="fld-email">
+                <label for="email">Email ID <span class="req" id="emailReqMark">*</span><span class="opt" id="emailOptMark" hidden>(optional)</span></label>
+                <input type="email" id="email" name="email" placeholder="you@example.com">
+                <div class="hint" id="emailHint" hidden>Auto‑filled from your account</div>
+                <div class="hint" id="contactHint">Add at least one — your email or a verified phone number.</div>
+                <div class="error-text">Enter a valid email address.</div>
+              </div>
+
+              <div class="field" id="fld-city">
+                <label for="city">City <span class="opt">(optional)</span></label>
+                <input type="text" id="city" name="city" placeholder="e.g., Bengaluru">
+              </div>
+
+              <div class="field" id="fld-role">
+                <label>Are you a? <span class="req">*</span></label>
+                <div class="radio-group" role="radiogroup" aria-label="Are you a?">
+                  <label class="radio-option">
+                    <input type="radio" name="role" value="Distributor"><span class="radio-dot"></span>Distributor
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="role" value="Retailer"><span class="radio-dot"></span>Retailer
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="role" value="Employee"><span class="radio-dot"></span>Employee
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="role" value="Others"><span class="radio-dot"></span>Others
+                  </label>
+                </div>
+                <div class="hint" id="roleAutoHint" hidden>Auto‑detected from the DMS portal</div>
+                <div class="error-text">Please tell us who you are.</div>
+              </div>
+
+              <div class="field" id="fld-empid" hidden>
+                <label for="empId">ID number <span class="opt">(optional)</span></label>
+                <input type="text" id="empId" name="empId" placeholder="e.g., DIST10234">
+                <div class="id-format-note" id="idFormatNote"></div>
+              </div>
+
+              <div class="btn-row">
+                <button type="button" class="btn-primary" data-next="2">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div class="step" data-step="2" hidden>
+
+              <div class="field" id="fld-brand">
+                <label>Brand &amp; size <span class="req">*</span></label>
+
+                <div class="brand-chip-row" id="brandChipRow" role="listbox" aria-label="Choose a brand"></div>
+
+                <div class="size-chip-row" id="sizeChipRow" hidden></div>
+
+                <div class="combo" id="brandCombo">
+                  <div class="combo-input">
+                    <span class="combo-swatch" id="brandSwatch" hidden></span>
+                    <input type="text" id="brandSearch" placeholder="Or type to search any product…" autocomplete="off">
+                    <span class="combo-clear" id="brandClear" hidden title="Clear selection">✕</span>
+                  </div>
+                  <div class="combo-panel" id="brandPanel"></div>
+                </div>
+                <input type="hidden" id="brandSize" name="brandSize" required>
+
+                <div class="hint">Tap a brand, then a size — or just start typing.</div>
+                <div class="error-text">Select the brand and size.</div>
+              </div>
+
+              <div class="field" id="fld-batchtext">
+                <label for="batchCode">Batch code <span class="req" id="batchReqStar">*</span></label>
+                <input type="text" id="batchCode" name="batchCode" required autocomplete="off" placeholder="Enter batch code" style="text-transform:uppercase; letter-spacing:1.5px; font-weight:600;">
+                <div class="hint">Printed near the cap or base of the bottle.</div>
+                <span class="badge verified" id="batchValidBadge" style="margin-top:8px;" hidden>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+                  Valid batch code
+                </span>
+                <div class="batch-attempts" id="batchAttempts"></div>
+                <div class="error-text" id="batchError">Oops, that doesn't look like a batch code. Please try again.</div>
+
+                <div class="batch-fallback" id="batchFallback">
+                  <p>Still not matching after 5 tries — do you have the batch code with you?</p>
+                  <div class="choice-row">
+                    <button type="button" class="btn-choice-yes" id="batchHasCodeYes">Yes, let me retry</button>
+                    <button type="button" class="btn-choice-no" id="batchHasCodeNo">No, I don't have it</button>
+                  </div>
+                </div>
+                <button type="button" class="batch-revert" id="batchRevertBtn" hidden>Actually, I do have it — let me enter it</button>
+              </div>
+
+              <div class="field" id="fld-batchimg">
+                <label>Photo of the batch code <span class="req">*</span></label>
+                <label class="upload-box" for="batchImage">
+                  <div class="icon">📷</div>
+                  <div class="main-txt">Tap to capture the batch code</div>
+                  <div class="sub-txt">Make sure the printed code is clear and in focus</div>
+                  <input type="file" id="batchImage" accept="image/*" capture="environment">
+                </label>
+                <div class="preview-row" id="batchPreview" hidden>
+                  <img id="batchPreviewImg" alt="">
+                  <div class="meta" id="batchPreviewName"></div>
+                  <button type="button" id="batchRemove">Remove</button>
+                </div>
+                <div class="error-text">Please attach a photo of the batch code.</div>
+              </div>
+
+              <div class="btn-row">
+                <button type="button" class="btn-secondary" data-back="1">Back</button>
+                <button type="button" class="btn-primary" data-next="3">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div class="step" data-step="3" hidden>
+
+              <div class="field" id="fld-issueimg">
+                <label>Photo of the issue <span class="req">*</span></label>
+                <label class="upload-box" for="issueImage">
+                  <div class="icon">🖼️</div>
+                  <div class="main-txt" id="issueUploadTxt">Tap to take a photo</div>
+                  <div class="sub-txt" id="issueUploadSub">Please use your camera to capture the issue live</div>
+                  <input type="file" id="issueImage" accept="image/*">
+                </label>
+                <div class="preview-row" id="issuePreview" hidden>
+                  <img id="issuePreviewImg" alt="">
+                  <div class="meta" id="issuePreviewName"></div>
+                  <button type="button" id="issueRemove">Remove</button>
+                </div>
+                <div class="error-text">Please attach a photo of the issue.</div>
+              </div>
+
+              <div class="field" id="fld-desc">
+                <label for="issueDesc">Issue description <span class="req">*</span></label>
+                <textarea id="issueDesc" name="issueDesc" required placeholder="Describe what's wrong — taste, packaging, foreign object, etc."></textarea>
+                <div class="word-counter" id="wordCounter">0 / 100 words</div>
+                <div class="error-text">Please describe the issue (up to 100 words).</div>
+              </div>
+
+              <div class="field" id="fld-consent">
+                <label class="consent-row" for="consentCheck">
+                  <input type="checkbox" id="consentCheck" required>
+                  <span class="consent-box" aria-hidden="true"></span>
+                  <span class="consent-text">By ticking this box, you agree HCCB can contact you about this report.</span>
+                </label>
+                <div class="error-text">Please tick the box to continue.</div>
+              </div>
+
+              <div class="btn-row">
+                <button type="button" class="btn-secondary" data-back="2">Back</button>
+                <button type="submit" class="btn-primary" id="submitBtn">Submit report</button>
+              </div>
+              <div class="submit-error-msg" id="submitError" hidden>Something went wrong sending your report. Please check your connection and try again.</div>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- SUCCESS SCREEN -->
+        <div class="success-card" id="successCard">
+          <div class="success-icon">✓</div>
+          <h2>Report submitted</h2>
+          <p>Thanks — we've logged your report and a quality team member will follow up if needed.</p>
+          <div class="ref-box" id="refNumber">HCCB-000000</div>
+          <div class="btn-row" style="max-width:280px; margin-left:auto; margin-right:auto;">
+            <button type="button" class="btn-primary" id="newReportBtn">Submit another report</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const steps = Array.from(document.querySelectorAll('.step'));
+  const nodes = Array.from(document.querySelectorAll('.stepper .node'));
+  const lines = Array.from(document.querySelectorAll('.stepper .line'));
+  const labels = Array.from(document.querySelectorAll('.stepper-labels span'));
+  const stepSubtext = document.getElementById('stepSubtext');
+  const subtextByStep = {
+    1: "Step 1 of 3 — a few details about you",
+    2: "Step 2 of 3 — which product had the issue",
+    3: "Step 3 of 3 — show us what went wrong"
+  };
+  let currentStep = 1;
+
+  function goToStep(n){
+    steps.forEach(s => s.hidden = (parseInt(s.dataset.step) !== n));
+    nodes.forEach(node => {
+      const val = parseInt(node.dataset.node);
+      node.classList.toggle('active', val === n);
+      node.classList.toggle('done', val < n);
+    });
+    lines.forEach(line => {
+      line.classList.toggle('done', parseInt(line.dataset.line) < n);
+    });
+    labels.forEach(l => l.classList.toggle('active', parseInt(l.dataset.label) === n));
+    stepSubtext.textContent = subtextByStep[n];
+    currentStep = n;
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function showError(fieldEl, show){
+    fieldEl.classList.toggle('invalid', !!show);
+  }
+
+  // ---------- Role (radio buttons) -> ID field ----------
+  const roleRadios = Array.from(document.querySelectorAll('input[name="role"]'));
+  function getRole(){
+    const r = roleRadios.find(r => r.checked);
+    return r ? r.value : '';
+  }
+  function setRole(val, disable){
+    roleRadios.forEach(r => {
+      r.checked = (r.value === val);
+      r.disabled = !!disable;
+    });
+    onRoleChange();
+  }
+  const empIdField = document.getElementById('fld-empid');
+  const empIdInput = document.getElementById('empId');
+  const idFormatNote = document.getElementById('idFormatNote');
+  const placeholders = {
+    Distributor: 'e.g., DIST10234',
+    Retailer: 'e.g., RET5567',
+    Employee: 'e.g., EMP2231'
+  };
+  function onRoleChange(){
+    const val = getRole();
+    showError(document.getElementById('fld-role'), false);
+    if(val === 'Distributor' || val === 'Retailer' || val === 'Employee'){
+      empIdField.hidden = false;
+      empIdInput.placeholder = placeholders[val];
+      idFormatNote.textContent = '';
+    } else {
+      empIdField.hidden = true;
+      empIdInput.value = '';
+    }
+  }
+  roleRadios.forEach(r => r.addEventListener('change', onRoleChange));
+
+  // ---------- URL param pre-fill (simulated auto-populate) ----------
+  const params = new URLSearchParams(window.location.search);
+  const emailField = document.getElementById('email');
+  if(params.get('email')){
+    emailField.value = params.get('email');
+    emailField.readOnly = true;
+    document.getElementById('emailHint').hidden = false;
+  }
+  if(params.get('source') === 'dms' && params.get('role')){
+    const match = roleRadios.find(r => r.value.toLowerCase() === params.get('role').toLowerCase());
+    if(match){
+      setRole(match.value, true);
+      document.getElementById('roleAutoHint').hidden = false;
+    }
+  }
+
+  // ---------- Phone + OTP ----------
+  const phone = document.getElementById('phone');
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  const otpBlock = document.getElementById('otpBlock');
+  const otpInput = document.getElementById('otp');
+  const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+  const verifiedBadge = document.getElementById('verifiedBadge');
+  const otpMsg = document.getElementById('otpMsg');
+  const resendBtn = document.getElementById('resendBtn');
+  let phoneVerified = false;
+  let resendTimer = null;
+
+  // ---------- Email <-> Phone: either one is required, not both ----------
+  const emailReqMark = document.getElementById('emailReqMark');
+  const emailOptMark = document.getElementById('emailOptMark');
+  const phoneReqMark = document.getElementById('phoneReqMark');
+  const phoneOptMark = document.getElementById('phoneOptMark');
+  const contactHint = document.getElementById('contactHint');
+
+  function isEmailValid(){
+    return emailField.value.trim() !== '' && emailField.checkValidity();
+  }
+  function updateContactRequirement(){
+    const emailOk = isEmailValid();
+    const phoneOk = phoneVerified;
+
+    emailField.required = !phoneOk;
+    emailReqMark.hidden = phoneOk;
+    emailOptMark.hidden = !phoneOk;
+
+    phone.required = !emailOk;
+    phoneReqMark.hidden = emailOk;
+    phoneOptMark.hidden = !emailOk;
+
+    if(emailOk || phoneOk){
+      contactHint.classList.remove('err-emphasis');
+      document.getElementById('fld-email').classList.remove('needs-contact');
+      document.getElementById('fld-phone').classList.remove('needs-contact');
+      showError(document.getElementById('fld-email'), false);
+      showError(document.getElementById('fld-phone'), false || (phone.value.trim() !== '' && !/^\d{10}$/.test(phone.value.trim())));
+    }
+  }
+  emailField.addEventListener('input', updateContactRequirement);
+
+  phone.addEventListener('input', () => {
+    phone.value = phone.value.replace(/\D/g,'').slice(0,10);
+    sendOtpBtn.disabled = phone.value.length !== 10;
+    if(phoneVerified){
+      phoneVerified = false;
+      verifiedBadge.hidden = true;
+      otpBlock.classList.remove('show');
+    }
+    updateContactRequirement();
+  });
+
+  sendOtpBtn.addEventListener('click', () => {
+    otpBlock.classList.add('show');
+    otpInput.value = '';
+    otpMsg.textContent = 'Demo mode — use code 123456 to verify. A code has been "sent" to +91 ' + phone.value + '.';
+    startResendTimer();
+  });
+
+  function startResendTimer(){
+    let secs = 30;
+    resendBtn.disabled = true;
+    resendBtn.textContent = 'Resend code (' + secs + 's)';
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+      secs -= 1;
+      if(secs <= 0){
+        clearInterval(resendTimer);
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend code';
+      } else {
+        resendBtn.textContent = 'Resend code (' + secs + 's)';
+      }
+    }, 1000);
+  }
+  resendBtn.addEventListener('click', () => {
+    otpMsg.textContent = 'New code sent (demo mode — use 123456).';
+    startResendTimer();
+  });
+
+  verifyOtpBtn.addEventListener('click', () => {
+    if(otpInput.value.trim() === '123456'){
+      phoneVerified = true;
+      verifiedBadge.hidden = false;
+      otpMsg.textContent = 'Phone number verified.';
+      phone.readOnly = true;
+      sendOtpBtn.disabled = true;
+      resendBtn.hidden = true;
+      showError(document.getElementById('fld-phone'), false);
+      updateContactRequirement();
+    } else {
+      otpMsg.textContent = 'That code isn\'t right — try 123456 in this demo.';
+      otpMsg.style.color = 'var(--danger)';
+    }
+  });
+  updateContactRequirement();
+
+  empIdInput.addEventListener('input', () => {
+    if(getRole() === 'Employee' && empIdInput.value.trim().length > 0){
+      const ok = /^EMP\d{3,6}$/i.test(empIdInput.value.trim());
+      idFormatNote.textContent = ok ? 'Format looks right.' : 'Expected format: EMP followed by digits, e.g. EMP2231.';
+      idFormatNote.className = 'id-format-note ' + (ok ? 'ok' : 'bad');
+    } else {
+      idFormatNote.textContent = '';
+    }
+  });
+
+  // ---------- Brand & size: creative two-tier picker ----------
+  const PRODUCTS = {
+    "Coca-Cola":      { color:"#E30016", sizes:["250 ml","600 ml","750 ml","1.25 L","2.25 L"] },
+    "Thums Up":       { color:"#141212", sizes:["250 ml","600 ml","750 ml","1.25 L"] },
+    "Sprite":         { color:"#00A652", sizes:["250 ml","600 ml","750 ml","1.25 L"] },
+    "Fanta":          { color:"#FF7A00", sizes:["250 ml","600 ml","750 ml"] },
+    "Limca":          { color:"#1E7A3C", sizes:["250 ml","600 ml","750 ml"] },
+    "Maaza":          { color:"#FFC20E", sizes:["250 ml","600 ml","1.2 L"] },
+    "Minute Maid":    { color:"#F5A300", sizes:["200 ml","250 ml"] },
+    "Kinley Water":   { color:"#0072BC", sizes:["500 ml","1 L","2 L"] },
+    "Georgia":        { color:"#6F4E37", sizes:["250 ml"] },
+    "Monster Energy": { color:"#1AA13A", sizes:["350 ml"] }
+  };
+  const ALL_ITEMS = Object.entries(PRODUCTS).flatMap(([brand, info]) =>
+    info.sizes.map(size => ({ brand, size, color: info.color, label: brand + ' ' + size }))
+  );
+
+  const brandChipRow = document.getElementById('brandChipRow');
+  const sizeChipRow = document.getElementById('sizeChipRow');
+  const brandSearch = document.getElementById('brandSearch');
+  const brandSwatch = document.getElementById('brandSwatch');
+  const brandClear = document.getElementById('brandClear');
+  const brandPanel = document.getElementById('brandPanel');
+  const brandHidden = document.getElementById('brandSize');
+  const brandField = document.getElementById('fld-brand');
+  let activeBrand = null, hiIndex = -1, filteredItems = [];
+
+  Object.entries(PRODUCTS).forEach(([brand, info]) => {
+    const chip = document.createElement('div');
+    chip.className = 'brand-chip';
+    chip.setAttribute('role','option');
+    chip.dataset.brand = brand;
+    chip.innerHTML = '<span class="sw" style="background:' + info.color + '"></span>' + brand;
+    chip.addEventListener('click', () => selectBrand(brand));
+    brandChipRow.appendChild(chip);
+  });
+
+  function selectBrand(brand){
+    activeBrand = brand;
+    Array.from(brandChipRow.children).forEach(c => c.classList.toggle('active', c.dataset.brand === brand));
+    sizeChipRow.innerHTML = '';
+    PRODUCTS[brand].sizes.forEach(size => {
+      const pill = document.createElement('div');
+      pill.className = 'size-chip';
+      pill.textContent = size;
+      pill.addEventListener('click', () => selectFinal(brand, size));
+      sizeChipRow.appendChild(pill);
+    });
+    sizeChipRow.hidden = false;
+    brandSearch.value = '';
+    brandSearch.placeholder = 'Pick a size above for ' + brand + '…';
+  }
+
+  function selectFinal(brand, size){
+    const info = PRODUCTS[brand];
+    brandHidden.value = brand + ' ' + size;
+    brandSearch.value = brand + ' ' + size;
+    brandSwatch.style.background = info.color;
+    brandSwatch.hidden = false;
+    brandClear.hidden = false;
+    Array.from(sizeChipRow.children).forEach(c => c.classList.toggle('active', c.textContent === size));
+    brandPanel.classList.remove('open');
+    showError(brandField, false);
+  }
+
+  function resetBrandPicker(){
+    activeBrand = null;
+    brandHidden.value = '';
+    brandSearch.value = '';
+    brandSearch.placeholder = 'Or type to search any product…';
+    brandSwatch.hidden = true;
+    brandClear.hidden = true;
+    sizeChipRow.hidden = true;
+    sizeChipRow.innerHTML = '';
+    Array.from(brandChipRow.children).forEach(c => c.classList.remove('active'));
+    brandPanel.classList.remove('open');
+  }
+
+  brandClear.addEventListener('click', resetBrandPicker);
+
+  function renderPanel(items){
+    brandPanel.innerHTML = '';
+    if(!items.length){
+      brandPanel.innerHTML = '<div class="combo-empty">No match — try a different brand or size.</div>';
+    } else {
+      items.forEach((it, i) => {
+        const row = document.createElement('div');
+        row.className = 'combo-opt' + (i === hiIndex ? ' hi' : '');
+        row.innerHTML = '<span class="sw" style="background:' + it.color + '"></span><b>' + it.brand + '</b>' +
+          '<span class="size-tag">' + it.size + '</span>';
+        row.addEventListener('mousedown', e => { e.preventDefault(); selectFinal(it.brand, it.size); });
+        brandPanel.appendChild(row);
+      });
+    }
+    brandPanel.classList.add('open');
+  }
+
+  brandSearch.addEventListener('input', () => {
+    const q = brandSearch.value.trim().toLowerCase();
+    filteredItems = q ? ALL_ITEMS.filter(it => it.label.toLowerCase().includes(q)) : ALL_ITEMS;
+    hiIndex = -1;
+    if(brandHidden.value && brandSearch.value !== brandHidden.value){
+      brandHidden.value = '';
+      brandSwatch.hidden = true;
+      brandClear.hidden = true;
+    }
+    renderPanel(filteredItems);
+  });
+  brandSearch.addEventListener('focus', () => {
+    filteredItems = brandSearch.value.trim() ? filteredItems : ALL_ITEMS;
+    if(!filteredItems.length) filteredItems = ALL_ITEMS;
+    renderPanel(filteredItems);
+  });
+  brandSearch.addEventListener('keydown', e => {
+    if(!brandPanel.classList.contains('open')) return;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); hiIndex = Math.min(hiIndex+1, filteredItems.length-1); renderPanel(filteredItems); }
+    if(e.key === 'ArrowUp'){ e.preventDefault(); hiIndex = Math.max(hiIndex-1, 0); renderPanel(filteredItems); }
+    if(e.key === 'Enter'){ e.preventDefault(); if(filteredItems[hiIndex]) selectFinal(filteredItems[hiIndex].brand, filteredItems[hiIndex].size); }
+    if(e.key === 'Escape'){ brandPanel.classList.remove('open'); }
+  });
+  document.addEventListener('click', e => {
+    if(!brandField.contains(e.target)) brandPanel.classList.remove('open');
+  });
+
+  // ---------- File uploads with preview ----------
+  function wireUpload(inputId, previewRowId, previewImgId, previewNameId, removeBtnId, uploadBoxSelector){
+    const input = document.getElementById(inputId);
+    const row = document.getElementById(previewRowId);
+    const img = document.getElementById(previewImgId);
+    const nameEl = document.getElementById(previewNameId);
+    const removeBtn = document.getElementById(removeBtnId);
+
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if(!file) return;
+      const url = URL.createObjectURL(file);
+      img.src = url;
+      nameEl.textContent = file.name;
+      row.hidden = false;
+    });
+    removeBtn.addEventListener('click', () => {
+      input.value = '';
+      row.hidden = true;
+    });
+  }
+  wireUpload('batchImage','batchPreview','batchPreviewImg','batchPreviewName','batchRemove');
+  wireUpload('issueImage','issuePreview','issuePreviewImg','issuePreviewName','issueRemove');
+
+  // Adjust "issue image" capture behaviour based on role (camera-only for
+  // general public, gallery allowed for internal employees/distributors/retailers,
+  // and for anyone likely on a desktop where camera capture doesn't apply).
+  const issueImageInput = document.getElementById('issueImage');
+  const issueUploadTxt = document.getElementById('issueUploadTxt');
+  const issueUploadSub = document.getElementById('issueUploadSub');
+  const isLikelyMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  function updateIssueUploadMode(){
+    const role = getRole();
+    const isInternal = (role === 'Employee' || role === 'Distributor' || role === 'Retailer');
+    if(isInternal || !isLikelyMobile){
+      issueImageInput.removeAttribute('capture');
+      issueUploadTxt.textContent = 'Tap to add a photo';
+      issueUploadSub.textContent = 'Choose from your camera or gallery';
+    } else {
+      issueImageInput.setAttribute('capture','environment');
+      issueUploadTxt.textContent = 'Tap to take a photo';
+      issueUploadSub.textContent = 'Please use your camera to capture the issue live';
+    }
+  }
+  roleRadios.forEach(r => r.addEventListener('change', updateIssueUploadMode));
+  updateIssueUploadMode();
+
+  // ---------- Batch code validation ----------
+  // Format: Month(A-L) + Date(2 digits) + Plant(2) + Line(2) + Shift(1) = 8 alphanumeric characters.
+  // Plant Code is checked against the real HCCB plant list. Line / Shift are only checked for
+  // correct length here — matching them against a full master (to identify the Plant POC / Quality
+  // Team) is backend/Kapture's job. The decoded segments are still sent in the submission payload
+  // so the backend doesn't have to re-parse the raw string.
+  const batchCode = document.getElementById('batchCode');
+  const batchErrorEl = document.getElementById('batchError');
+  const batchAttemptsEl = document.getElementById('batchAttempts');
+  const batchFallback = document.getElementById('batchFallback');
+  const batchReqStar = document.getElementById('batchReqStar');
+  const batchRevertBtn = document.getElementById('batchRevertBtn');
+  const daysInMonth = {A:31,B:29,C:31,D:30,E:31,F:30,G:31,H:31,I:30,J:31,K:30,L:31}; // Feb kept lenient
+
+  // HCCB Plant Code master. TODO: replace with a live fetch from the Batch Mapping
+  // Master API once available — everything below is driven off this one object,
+  // so adding/renaming a plant only means updating this list.
+  const PLANT_MASTER = {
+    A1:'Goblej', B1:'Bhopal', C1:'Nemam', F1:'Khorda', H3:'Ameenpur', HN:'Avinya',
+    K1:'Bidadi Plant', KJ:'Aranya', M6:'Wada', N1:'Nashik Plant', P1:'Pirangut',
+    PG:'Lote Plant', V3:'Srikalahasti', Y1:'Goa'
+  };
+  const BATCH_RE = new RegExp('^([A-L])([0-9]{2})(' + Object.keys(PLANT_MASTER).join('|') + ')([A-Z0-9]{2})([A-Z0-9])$');
+
+  const MAX_ATTEMPTS = 5;
+  const BATCH_FULL_LEN = 8;
+  let batchAttemptsLeft = MAX_ATTEMPTS;
+  let batchUnavailable = false; // true once the person tells us they don't have the code
+
+  // "BN" is just a label some people copy off the bottle — ignore it if present,
+  // don't require it and don't add it back in. The real code is 8 characters.
+  function normalizeBatch(input){
+    let s = input.toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(s.startsWith('BN')) s = s.slice(2);
+    return s.slice(0, 8);
+  }
+
+  function batchCodeStatus(){
+    if(batchUnavailable) return {valid:true};
+    const val = batchCode.value;
+    if(val === '') return {valid:false, reason:'empty'};
+    const m = val.match(BATCH_RE);
+    if(!m) return {valid:false, reason:'format'};
+    const [, month, dayStr, plant, line, shift] = m;
+    const day = parseInt(dayStr, 10);
+    if(day < 1 || day > daysInMonth[month]) return {valid:false, reason:'day'};
+    return {valid:true, month, day, plant, plantName: PLANT_MASTER[plant], line, shift};
+  }
+
+  const batchValidBadge = document.getElementById('batchValidBadge');
+
+  batchCode.addEventListener('input', () => {
+    const clean = normalizeBatch(batchCode.value);
+    batchCode.value = clean;
+    batchValidBadge.hidden = true;
+    if(clean.length < BATCH_FULL_LEN){
+      showError(document.getElementById('fld-batchtext'), false);
+      return; // only judge once they've entered the complete code
+    }
+    const status = batchCodeStatus();
+    if(status.valid){
+      showError(document.getElementById('fld-batchtext'), false);
+      batchAttemptsEl.textContent = '';
+      batchValidBadge.hidden = false;
+    } else {
+      batchAttemptsLeft -= 1;
+      showError(document.getElementById('fld-batchtext'), true);
+      if(batchAttemptsLeft > 0){
+        batchAttemptsEl.textContent = batchAttemptsLeft + ' attempt' + (batchAttemptsLeft === 1 ? '' : 's') + ' left';
+      } else {
+        batchAttemptsEl.textContent = '';
+        batchErrorEl.style.display = 'none';
+        batchFallback.classList.add('show');
+      }
+    }
+  });
+
+  document.getElementById('batchHasCodeYes').addEventListener('click', () => {
+    batchAttemptsLeft = MAX_ATTEMPTS;
+    batchFallback.classList.remove('show');
+    batchErrorEl.style.display = '';
+    batchAttemptsEl.textContent = '';
+    batchCode.value = '';
+    showError(document.getElementById('fld-batchtext'), false);
+    batchCode.focus();
+  });
+
+  document.getElementById('batchHasCodeNo').addEventListener('click', () => {
+    batchUnavailable = true;
+    batchFallback.classList.remove('show');
+    batchErrorEl.style.display = '';
+    showError(document.getElementById('fld-batchtext'), false);
+    batchCode.required = false;
+    batchCode.disabled = true;
+    batchCode.value = '';
+    batchReqStar.hidden = true;
+    batchRevertBtn.hidden = false;
+    // The batch code photo carries the requirement instead — it's already mandatory.
+  });
+
+  batchRevertBtn.addEventListener('click', () => {
+    batchUnavailable = false;
+    batchAttemptsLeft = MAX_ATTEMPTS;
+    batchCode.required = true;
+    batchCode.disabled = false;
+    batchReqStar.hidden = false;
+    batchRevertBtn.hidden = true;
+    batchCode.focus();
+  });
+
+  // ---------- Word-limited description ----------
+  const issueDesc = document.getElementById('issueDesc');
+  const wordCounter = document.getElementById('wordCounter');
+  issueDesc.addEventListener('input', () => {
+    let words = issueDesc.value.trim().length ? issueDesc.value.trim().split(/\s+/) : [];
+    if(words.length > 100){
+      words = words.slice(0,100);
+      issueDesc.value = words.join(' ');
+    }
+    wordCounter.textContent = words.length + ' / 100 words';
+    wordCounter.classList.toggle('limit', words.length >= 100);
+  });
+
+  document.getElementById('consentCheck').addEventListener('change', function(){
+    if(this.checked) showError(document.getElementById('fld-consent'), false);
+  });
+
+  // ---------- Step validation ----------
+  function validateStep(n){
+    let valid = true;
+
+    if(n === 1){
+      const nameOk = document.getElementById('fullName').value.trim() !== '';
+      showError(document.getElementById('fld-name'), !nameOk);
+      valid = valid && nameOk;
+
+      const emailFilled = emailField.value.trim() !== '';
+      const emailOk = emailFilled && emailField.checkValidity();
+      const phoneFilled = /^\d{10}$/.test(phone.value);
+      const phoneOk = phoneFilled && phoneVerified;
+      const contactOk = emailOk || phoneOk;
+
+      contactHint.classList.toggle('err-emphasis', !contactOk);
+
+      if(emailFilled && !emailOk){
+        showError(document.getElementById('fld-email'), true);
+        document.querySelector('#fld-email .error-text').textContent = 'Enter a valid email address.';
+      } else {
+        document.getElementById('fld-email').classList.remove('invalid');
+        document.getElementById('fld-email').classList.toggle('needs-contact', !contactOk && !phoneFilled);
+      }
+
+      if(phoneFilled && !phoneVerified){
+        showError(document.getElementById('fld-phone'), true);
+        document.querySelector('#fld-phone .error-text').textContent = 'Please verify your phone number with the OTP.';
+      } else if(!phoneFilled && phone.value.trim() !== ''){
+        showError(document.getElementById('fld-phone'), true);
+        document.querySelector('#fld-phone .error-text').textContent = 'Enter a valid 10-digit phone number.';
+      } else {
+        document.getElementById('fld-phone').classList.remove('invalid');
+        document.getElementById('fld-phone').classList.toggle('needs-contact', !contactOk && !emailFilled);
+      }
+      valid = valid && contactOk;
+
+      const roleOk = getRole() !== '';
+      showError(document.getElementById('fld-role'), !roleOk);
+      valid = valid && roleOk;
+    }
+
+    if(n === 2){
+      const brandOk = document.getElementById('brandSize').value.trim() !== '';
+      showError(document.getElementById('fld-brand'), !brandOk);
+      valid = valid && brandOk;
+
+      const batchTextOk = batchCodeStatus().valid;
+      showError(document.getElementById('fld-batchtext'), !batchTextOk);
+      valid = valid && batchTextOk;
+
+      const batchImgOk = document.getElementById('batchImage').files.length > 0;
+      showError(document.getElementById('fld-batchimg'), !batchImgOk);
+      valid = valid && batchImgOk;
+    }
+
+    if(n === 3){
+      const issueImgOk = document.getElementById('issueImage').files.length > 0;
+      showError(document.getElementById('fld-issueimg'), !issueImgOk);
+      valid = valid && issueImgOk;
+
+      const descOk = issueDesc.value.trim() !== '';
+      showError(document.getElementById('fld-desc'), !descOk);
+      valid = valid && descOk;
+
+      const consentOk = document.getElementById('consentCheck').checked;
+      showError(document.getElementById('fld-consent'), !consentOk);
+      valid = valid && consentOk;
+    }
+
+    return valid;
+  }
+
+  document.querySelectorAll('[data-next]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(validateStep(currentStep)){
+        goToStep(parseInt(btn.dataset.next));
+      } else {
+        const firstInvalid = document.querySelector('.step:not([hidden]) .field.invalid');
+        if(firstInvalid) firstInvalid.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    });
+  });
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(parseInt(btn.dataset.back)));
+  });
+
+  // ---------- Kapture "Add Ticket" integration ----------
+  // Kapture's endpoint needs a secret Authorization header. That token must never live in
+  // client-side code (view-source would expose it to anyone), and Kapture's API almost
+  // certainly isn't CORS-enabled for browser calls from this form's domain anyway.
+  // So: this form POSTs to YOUR OWN backend below. That backend holds the real token and
+  // forwards the request server-side to:
+  //   POST https://cokebuddy.kapturecrm.com/add-ticket-from-other-source.html/v.2.0
+  const TICKET_API_ENDPOINT = '/api/create-ticket'; // <-- point this at your backend proxy
+
+  function toISODate(date){ return date.toISOString().slice(0,10); }
+  function addDays(date, days){ const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+
+  // The Kapture doc references uploading the file first and passing back a URL/ID, but the
+  // upload endpoint itself isn't documented yet. Wire this up once it is — for now it
+  // resolves to an empty string so submission isn't blocked on it.
+  async function uploadImageAndGetUrl(file){
+    if(!file) return '';
+    // Example once the endpoint is known:
+    // const fd = new FormData();
+    // fd.append('file', file);
+    // const res = await fetch('/api/upload-attachment', { method: 'POST', body: fd });
+    // const data = await res.json();
+    // return data.url;
+    return '';
+  }
+
+  // Maps this form's fields onto the exact request body Kapture's Add Ticket API expects.
+  function buildTicketPayload(issueImageUrl){
+    const finalBatchStatus = batchCodeStatus();
+    const brandSize = document.getElementById('brandSize').value.trim();
+    const name = document.getElementById('fullName').value.trim();
+    const role = getRole();
+    const cityVal = document.getElementById('city').value.trim();
+    const idVal = empIdInput.value.trim();
+    const desc = issueDesc.value.trim();
+    const batchVal = batchUnavailable ? '' : document.getElementById('batchCode').value.trim();
+
+    let ticketDetails = name + (role ? ' (' + role + ')' : '') + ' reported an issue with ' + (brandSize || 'an HCCB product') + ': ' + desc;
+    if(batchUnavailable){
+      ticketDetails += ' Batch code was not available from the customer — see the attached batch-code photo for reference.';
+    } else if(finalBatchStatus.plantName){
+      ticketDetails += ' (Batch: ' + batchVal + ', ' + finalBatchStatus.plantName + ' plant.)';
+    }
+
+    return [{
+      title: 'Issue with ' + (brandSize || 'HCCB product'),
+      ticket_details: ticketDetails,
+      due_date: toISODate(addDays(new Date(), 2)), // TODO: set per the real SLA for this issue/priority
+      customer_id: idVal || ('PH-' + phone.value.trim()), // TODO: confirm against the real customer/distributor master
+      customer_name: name,
+      phone: phone.value.trim(),
+      email_id: emailField.value.trim(),
+      address: cityVal,
+      reopen_details: '',
+      webform: {
+        'are_you_a_?': role,
+        'batchcode': batchVal,
+        'issue_with_brand_size': 'Yes',
+        'brand,_size': brandSize,
+        'upload_image_of_the_issue': issueImageUrl || '',
+        'city': cityVal,
+        'enter_your_distributor/retailer/emp_id?': idVal,
+        'issue_description': desc
+      }
+    }];
+  }
+
+  const form = document.getElementById('issueForm');
+  const formWrap = document.getElementById('formWrap');
+  const successCard = document.getElementById('successCard');
+  const refNumber = document.getElementById('refNumber');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitErrorEl = document.getElementById('submitError');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!validateStep(3)) {
+      const firstInvalid = document.querySelector('.step:not([hidden]) .field.invalid');
+      if(firstInvalid) firstInvalid.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    submitErrorEl.hidden = true;
+
+    try {
+      const issueFile = document.getElementById('issueImage').files[0];
+      const issueImageUrl = await uploadImageAndGetUrl(issueFile);
+      const body = buildTicketPayload(issueImageUrl);
+
+      const res = await fetch(TICKET_API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if(!res.ok) throw new Error('Ticket API responded with status ' + res.status);
+
+      const data = await res.json().catch(() => ({}));
+      const ticketRef = (data && (data.ticket_id || data.id)) ||
+        ('HCCB-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(1000 + Math.random()*9000));
+
+      refNumber.textContent = ticketRef;
+      formWrap.hidden = true;
+      successCard.classList.add('show');
+    } catch(err){
+      console.error('Ticket submission failed:', err);
+      submitErrorEl.hidden = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit report';
+    }
+  });
+
+  document.getElementById('newReportBtn').addEventListener('click', () => {
+    form.reset();
+    document.querySelectorAll('.field').forEach(f => f.classList.remove('invalid'));
+    document.querySelectorAll('.preview-row').forEach(r => r.hidden = true);
+    otpBlock.classList.remove('show');
+    verifiedBadge.hidden = true;
+    phoneVerified = false;
+    phone.readOnly = false;
+    sendOtpBtn.disabled = true;
+    resendBtn.hidden = false;
+    empIdField.hidden = true;
+    batchAttemptsLeft = MAX_ATTEMPTS;
+    batchUnavailable = false;
+    batchCode.required = true;
+    batchCode.disabled = false;
+    batchReqStar.hidden = false;
+    batchRevertBtn.hidden = true;
+    batchFallback.classList.remove('show');
+    batchErrorEl.style.display = '';
+    batchAttemptsEl.textContent = '';
+    batchValidBadge.hidden = true;
+    wordCounter.textContent = '0 / 100 words';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit report';
+    submitErrorEl.hidden = true;
+    successCard.classList.remove('show');
+    formWrap.hidden = false;
+    updateContactRequirement();
+    resetBrandPicker();
+    goToStep(1);
+  });
+
+})();
+</script>
+</body>
+</html>
