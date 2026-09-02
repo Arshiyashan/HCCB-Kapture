@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/create-ticket.js": {
+      "runtime": "nodejs20.x"
+    },
+    "api/upload-attachment.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}
