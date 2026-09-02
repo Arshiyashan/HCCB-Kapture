@@ -1,0 +1,10 @@
+{
+  "name": "hccb-webform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HCCB product-issue webform (frontend) + Vercel serverless backend that proxies ticket creation to Kapture CRM and handles photo uploads via Cloudinary.",
+  "dependencies": {
+    "cloudinary": "^2.5.1",
+    "formidable": "^3.5.1"
+  }
+}
