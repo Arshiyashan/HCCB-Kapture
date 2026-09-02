@@ -1352,27 +1352,26 @@
   // So: this form POSTs to YOUR OWN backend below. That backend holds the real token and
   // forwards the request server-side to:
   //   POST https://cokebuddy.kapturecrm.com/add-ticket-from-other-source.html/v.2.0
-  const TICKET_API_ENDPOINT = '/api/create-ticket'; // <-- point this at your backend proxy
+  const TICKET_API_ENDPOINT = '/api/create-ticket';
+  const UPLOAD_API_ENDPOINT = '/api/upload-attachment';
 
   function toISODate(date){ return date.toISOString().slice(0,10); }
   function addDays(date, days){ const d = new Date(date); d.setDate(d.getDate() + days); return d; }
 
-  // The Kapture doc references uploading the file first and passing back a URL/ID, but the
-  // upload endpoint itself isn't documented yet. Wire this up once it is — for now it
-  // resolves to an empty string so submission isn't blocked on it.
+  // Uploads a captured photo (issue photo or batch-code photo) to our backend,
+  // which stores it in Cloudinary and returns a public HTTPS URL for Kapture.
   async function uploadImageAndGetUrl(file){
     if(!file) return '';
-    // Example once the endpoint is known:
-    // const fd = new FormData();
-    // fd.append('file', file);
-    // const res = await fetch('/api/upload-attachment', { method: 'POST', body: fd });
-    // const data = await res.json();
-    // return data.url;
-    return '';
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(UPLOAD_API_ENDPOINT, { method: 'POST', body: fd });
+    if(!res.ok) throw new Error('Image upload failed with status ' + res.status);
+    const data = await res.json();
+    return data.url || '';
   }
 
   // Maps this form's fields onto the exact request body Kapture's Add Ticket API expects.
-  function buildTicketPayload(issueImageUrl){
+  function buildTicketPayload(issueImageUrl, batchImageUrl){
     const finalBatchStatus = batchCodeStatus();
     const brandSize = document.getElementById('brandSize').value.trim();
     const name = document.getElementById('fullName').value.trim();
@@ -1405,6 +1404,7 @@
         'issue_with_brand_size': 'Yes',
         'brand,_size': brandSize,
         'upload_image_of_the_issue': issueImageUrl || '',
+        'batchcode_image': batchImageUrl || '',
         'city': cityVal,
         'enter_your_distributor/retailer/emp_id?': idVal,
         'issue_description': desc
@@ -1433,8 +1433,12 @@
 
     try {
       const issueFile = document.getElementById('issueImage').files[0];
-      const issueImageUrl = await uploadImageAndGetUrl(issueFile);
-      const body = buildTicketPayload(issueImageUrl);
+      const batchFile = batchUnavailable ? null : document.getElementById('batchImage').files[0];
+      const [issueImageUrl, batchImageUrl] = await Promise.all([
+        uploadImageAndGetUrl(issueFile),
+        uploadImageAndGetUrl(batchFile)
+      ]);
+      const body = buildTicketPayload(issueImageUrl, batchImageUrl);
 
       const res = await fetch(TICKET_API_ENDPOINT, {
         method: 'POST',
