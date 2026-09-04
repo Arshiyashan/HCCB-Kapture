@@ -4,16 +4,76 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HCCB — Report a Product Issue</title>
+<!-- Invisible reCAPTCHA (v2). "explicit" render + our own onload callback lets us
+     bind it to the submit button ourselves instead of an auto-inserted badge. -->
+<script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+<script>
+  // Replace with your own reCAPTCHA v2 "Invisible" site key, created at
+  // https://www.google.com/recaptcha/admin (choose "Invisible reCAPTCHA badge").
+  // This key alone does NOT stop bots — it only lets the browser request a
+  // one-time verification token. The actual block happens on your backend:
+  // it must call https://www.google.com/recaptcha/api/siteverify with the
+  // matching SECRET key (never put the secret key in this file) and reject
+  // the ticket-creation request if that check fails. See the
+  // "recaptcha_token" field added to the ticket payload further down.
+  window.RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_SITE_KEY_HERE';
+
+  var recaptchaWidgetId = null;
+  var recaptchaResolve = null;
+
+  // Called by Google's script once it has loaded (see ?onload= above).
+  window.onRecaptchaLoad = function(){
+    function mount(){
+      if(typeof grecaptcha === 'undefined') return;
+      recaptchaWidgetId = grecaptcha.render('recaptchaContainer', {
+        sitekey: window.RECAPTCHA_SITE_KEY,
+        size: 'invisible',
+        badge: 'bottomright',
+        callback: function(token){
+          if(recaptchaResolve){ recaptchaResolve(token); recaptchaResolve = null; }
+        },
+        'expired-callback': function(){
+          if(recaptchaResolve){ recaptchaResolve(null); recaptchaResolve = null; }
+        },
+        'error-callback': function(){
+          if(recaptchaResolve){ recaptchaResolve(null); recaptchaResolve = null; }
+        }
+      });
+    }
+    // #recaptchaContainer lives further down the page — make sure the DOM
+    // is actually there before we try to render into it.
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', mount);
+    } else {
+      mount();
+    }
+  };
+
+  // Runs the invisible challenge and resolves with a fresh one-time token
+  // (or null if reCAPTCHA hasn't loaded / the challenge failed). The form's
+  // submit handler awaits this right before sending the report.
+  window.getRecaptchaToken = function(){
+    return new Promise(function(resolve){
+      if(typeof grecaptcha === 'undefined' || recaptchaWidgetId === null){
+        resolve(null);
+        return;
+      }
+      recaptchaResolve = resolve;
+      grecaptcha.reset(recaptchaWidgetId); // each attempt needs its own fresh token
+      grecaptcha.execute(recaptchaWidgetId);
+    });
+  };
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --coke-red:#E30016;
     --coke-red-dark:#A30010;
     --coke-red-tint:#FDECEA;
     --ink:#141212;
-    --black-panel:#0E0C0C;
-    --black-panel-soft:#1C1817;
+    --black-panel:#171417;
+    --black-panel-soft:#221E20;
     --grey-700:#4A4A4A;
     --grey-500:#838383;
     --grey-300:#D3D2D2;
@@ -26,21 +86,23 @@
     --danger:#A30010;
     --brand-gradient: linear-gradient(100deg, #FF1F2E 0%, #E30016 32%, #7A0009 68%, #1C1817 100%);
     --btn-gradient: linear-gradient(120deg, #FF2A2A 0%, #E30016 55%, #A30010 100%);
-    --radius-s:3px;
-    --radius-m:8px;
+    --radius-s:10px;
+    --radius-m:16px;
     --shadow-panel: 0 24px 60px rgba(0,0,0,0.14);
   }
 
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0; max-width:100%; overflow-x:hidden;}
   body{
     font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
     color:var(--ink);
     background:var(--grey-100);
     -webkit-font-smoothing:antialiased;
     line-height:1.5;
+    width:100%;
   }
-  h1,h2,h3{font-family:'Fredoka',sans-serif;margin:0;}
+  h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; letter-spacing:-0.01em; margin:0;}
+  .form-card h2, .success-card h2{font-weight:600;}
   button{font-family:inherit;}
 
   .page{
@@ -54,8 +116,8 @@
     position:relative;
     flex:0 0 38%;
     background:
-      radial-gradient(120% 90% at 100% 0%, rgba(227,0,22,0.35) 0%, rgba(227,0,22,0) 55%),
-      radial-gradient(90% 70% at 0% 100%, rgba(227,0,22,0.18) 0%, rgba(227,0,22,0) 60%),
+      radial-gradient(120% 90% at 100% 0%, rgba(227,0,22,0.14) 0%, rgba(227,0,22,0) 55%),
+      radial-gradient(90% 70% at 0% 100%, rgba(227,0,22,0.07) 0%, rgba(227,0,22,0) 60%),
       linear-gradient(160deg, var(--black-panel-soft) 0%, var(--black-panel) 60%);
     color:var(--white);
     padding:56px 48px 40px;
@@ -69,7 +131,7 @@
     top:-90px; right:-90px;
     width:280px; height:280px;
     border-radius:50%;
-    border:26px solid rgba(227,0,22,0.22);
+    border:26px solid rgba(227,0,22,0.10);
   }
   .brand-panel .rings::after{
     content:"";
@@ -77,22 +139,29 @@
     top:60px; left:60px;
     width:160px; height:160px;
     border-radius:50%;
-    border:16px solid rgba(255,255,255,0.09);
+    border:16px solid rgba(255,255,255,0.06);
   }
   .brand-mark{
-    font-family:'Fredoka',sans-serif;
+    font-family:'Plus Jakarta Sans',sans-serif;
     font-weight:800;
     font-size:22px;
     letter-spacing:0.5px;
     position:relative;
     z-index:1;
     color:var(--white);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
   }
-  .brand-mark span{color:var(--white); background:var(--coke-red); padding:3px 10px; border-radius:20px; margin-left:4px; font-size:14px; vertical-align:2px;}
+  .brand-logo-img{
+    height:82px; width:auto; display:block;
+    filter:drop-shadow(0 0 18px rgba(227,0,22,0.25)) drop-shadow(0 3px 10px rgba(0,0,0,0.4));
+  }
   .brand-copy{position:relative; z-index:1;}
   .brand-copy h1{
     font-size:34px;
-    line-height:1.18;
+    line-height:1.3;
     margin-bottom:18px;
     max-width:360px;
     color:var(--white);
@@ -149,14 +218,21 @@
     margin-bottom:26px;
   }
 
-  /* Stepper */
+  /* Stepper — each node + its caption live in one column together,
+     so the caption is always exactly centered under its circle no
+     matter how long the text is or how wide the screen is. The
+     connecting line is a separate flex-grow element between columns. */
   .stepper{
     display:flex;
-    align-items:center;
-    margin-bottom:30px;
+    align-items:flex-start;
+    margin-bottom:24px;
   }
-  .stepper .seg{
-    display:flex; align-items:center; flex:1;
+  .step-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    flex:0 0 auto;
+    gap:8px;
   }
   .stepper .node{
     width:28px; height:28px;
@@ -165,22 +241,27 @@
     color:var(--grey-500);
     display:flex; align-items:center; justify-content:center;
     font-size:13px; font-weight:700;
-    flex:0 0 28px;
+    flex:none;
     transition:background .25s ease, color .25s ease;
   }
   .stepper .node.active,
   .stepper .node.done{background:var(--coke-red); color:var(--white);}
   .stepper .line{
-    flex:1; height:2px; background:var(--grey-150); margin:0 6px;
+    flex:1 1 auto; height:2px; background:var(--grey-150); margin:0 6px;
+    margin-top:13px; /* lines up with the vertical center of the 28px node */
     transition:background .25s ease;
+    min-width:16px;
   }
   .stepper .line.done{background:var(--coke-red);}
-  .stepper .label-row{display:flex; margin-bottom:30px; margin-top:-22px;}
-  .stepper-labels{display:flex; justify-content:space-between; font-size:11.5px; color:var(--grey-500); margin-top:6px; margin-bottom:24px;}
-  .stepper-labels span{flex:1; text-align:center;}
-  .stepper-labels span:first-child{text-align:left;}
-  .stepper-labels span:last-child{text-align:right;}
-  .stepper-labels span.active{color:var(--ink); font-weight:600;}
+  .step-label{
+    font-size:11.5px;
+    line-height:1.3;
+    color:var(--grey-500);
+    text-align:center;
+    white-space:nowrap;
+  }
+  .step-label.active{color:var(--ink); font-weight:600;}
+
 
   fieldset{border:none; padding:0; margin:0;}
   .field{margin-bottom:20px;}
@@ -232,30 +313,106 @@
   .inline-row > *{flex:1;}
 
   /* radio group ("Are you a?") */
-  .radio-group{display:flex; flex-wrap:wrap; gap:8px 26px;}
-  .radio-option{
-    display:flex; align-items:center; gap:10px;
-    font-size:14.5px; font-weight:500; color:var(--ink);
-    cursor:pointer; padding:8px 2px; position:relative;
+  .radio-group{display:flex; flex-wrap:wrap; gap:10px;}
+  .radio-group .radio-option{
+    display:flex; align-items:center; gap:12px;
+    font-size:14.5px; font-weight:600; color:var(--ink); line-height:1;
+    cursor:pointer; padding:13px 22px 13px 16px; position:relative;
+    border:1.8px solid var(--grey-300); border-radius:28px;
+    background:var(--white);
+    transition:border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .1s ease;
   }
   .radio-option input{position:absolute; opacity:0; width:0; height:0;}
   .radio-dot{
-    width:19px; height:19px; flex:none; border-radius:50%;
+    width:20px; height:20px; flex:none; border-radius:50%;
     border:2px solid var(--input-border); position:relative;
-    display:inline-block;
-    transition:border-color .15s ease;
+    display:inline-block; box-sizing:border-box;
+    transition:border-color .15s ease, background .15s ease;
   }
-  .radio-option:hover .radio-dot{border-color:var(--ink);}
+  .radio-option:hover{border-color:var(--coke-red); transform:translateY(-1px); box-shadow:0 6px 14px -8px rgba(0,0,0,0.18);}
+  .radio-option:hover .radio-dot{border-color:var(--coke-red);}
   .radio-option input:checked ~ .radio-dot{border-color:var(--coke-red);}
   .radio-option input:checked ~ .radio-dot::after{
-    content:""; position:absolute; top:3px; left:3px; width:9px; height:9px;
+    content:""; position:absolute; top:4px; left:4px; width:12px; height:12px;
     border-radius:50%; background:var(--coke-red);
+    box-shadow:0 0 0 3px rgba(227,0,22,0.18);
   }
   .radio-option input:focus-visible ~ .radio-dot{outline:2px solid var(--coke-red); outline-offset:2px;}
+  /* Brighter selected state: the whole pill lights up in brand red */
+  .radio-option:has(input:checked){
+    background:var(--btn-gradient);
+    border-color:var(--coke-red);
+    color:var(--white);
+    box-shadow:0 12px 24px -10px rgba(227,0,22,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .radio-option:has(input:checked) .radio-dot{border-color:var(--white); background:rgba(255,255,255,0.12);}
+  .radio-option:has(input:checked) .radio-dot::after{background:var(--white); box-shadow:0 0 0 3px rgba(255,255,255,0.28);}
   .field.invalid .radio-dot{border-color:var(--danger);}
 
-  .phone-row{display:flex; gap:10px;}
-  .phone-row input{flex:1;}
+  /* "Issue is regarding" L1 -> L2 -> L3 cascading category chips.
+     Each depth is deliberately styled differently so it's obvious which
+     level you're choosing at: L1 = large gradient pill (primary choice),
+     L2 = colored-accent rounded tag, soft tint when active (category),
+     L3 = small solid-filled tag when active (most specific, final pick). */
+  .issue-cat-picker{display:flex; flex-direction:column; gap:8px;}
+  .issue-cat-caption{
+    font-size:11px; font-weight:700; color:var(--grey-500);
+    text-transform:uppercase; letter-spacing:0.4px; margin-top:3px;
+  }
+  .issue-cat-row{display:flex; flex-wrap:wrap; gap:9px;}
+  .issue-chip{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:9px 16px; border-radius:20px; border:1.5px solid var(--grey-300);
+    background:var(--white); font-size:13px; font-weight:600; color:var(--ink);
+    cursor:pointer; transition:all .15s ease; user-select:none;
+  }
+  .issue-chip .chip-emoji{font-size:15px; line-height:1; flex:none;}
+  .issue-chip:hover{border-color:var(--coke-red); color:var(--coke-red-dark);}
+  .issue-cat-row.l1 .issue-chip{padding:11px 20px; font-size:13.5px;}
+  .issue-cat-row.l1 .issue-chip svg{flex:none;}
+  .issue-cat-row.l1 .issue-chip.active{
+    background:var(--btn-gradient); border-color:var(--coke-red); color:var(--white);
+    box-shadow:0 10px 20px -9px rgba(227,0,22,0.55);
+  }
+  .issue-chip.active{background:var(--ink); border-color:var(--ink); color:var(--white);}
+
+  /* L2 — category tag: colored left accent always visible; soft tint fill when active */
+  .issue-chip[data-lvl="l2"]{
+    border-radius:10px; padding:9px 14px 9px 11px;
+    border-left:4px solid var(--chip-color, var(--grey-300));
+  }
+  .issue-chip[data-lvl="l2"]:hover{
+    border-color:var(--chip-color, var(--coke-red));
+    border-left-color:var(--chip-color, var(--coke-red));
+    color:var(--chip-color, var(--coke-red-dark));
+  }
+  .issue-chip[data-lvl="l2"].active{
+    background:var(--chip-tint, var(--grey-100));
+    border-color:var(--chip-color, var(--ink));
+    color:var(--chip-color, var(--ink));
+  }
+
+  /* L3 — specific-issue tag: smaller and more compact than L2, solid fill when
+     active so the final, most-specific pick reads as more "committed." */
+  .issue-chip[data-lvl="l3"]{
+    padding:6px 13px 6px 10px; font-size:12px; border-radius:14px;
+  }
+  .issue-chip[data-lvl="l3"] .chip-emoji{font-size:12.5px;}
+  .issue-chip[data-lvl="l3"]:hover{
+    border-color:var(--chip-color, var(--coke-red));
+    color:var(--chip-color, var(--coke-red-dark));
+  }
+  .issue-chip[data-lvl="l3"].active{
+    background:var(--chip-color, var(--ink));
+    border-color:var(--chip-color, var(--ink));
+    color:var(--white);
+  }
+
+  .issue-chip-more{background:var(--grey-100); border-style:dashed; color:var(--grey-600);}
+  .issue-chip-more:hover{border-color:var(--ink); color:var(--ink);}
+
+  .phone-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .phone-row input{flex:1 1 160px; min-width:0;}
   .btn-ghost-sm{
     flex:0 0 auto;
     padding:0 16px;
@@ -280,8 +437,9 @@
     display:none;
   }
   .otp-block.show{display:block;}
-  .otp-block .otp-row{display:flex; gap:10px; align-items:center;}
-  .otp-block input{flex:0 0 140px; letter-spacing:4px; font-weight:600; text-align:center;}
+  .otp-block .otp-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .otp-block input{flex:1 1 130px; max-width:160px; min-width:110px; letter-spacing:4px; font-weight:600; text-align:center;}
+  .otp-block .badge{flex:0 0 auto;}
   .otp-hint{font-size:11.5px; color:var(--grey-500); margin-top:8px;}
   .resend{background:none; border:none; color:var(--coke-red); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; margin-top:8px;}
   .resend:disabled{color:var(--grey-500); cursor:default;}
@@ -311,7 +469,11 @@
   }
   .upload-box:hover{border-color:var(--coke-red); background:var(--coke-red-tint);}
   .upload-box input{display:none;}
-  .upload-box .icon{font-size:22px; margin-bottom:6px;}
+  .upload-box .icon{
+    width:52px; height:52px; margin:0 auto 10px;
+    border-radius:50%; background:var(--coke-red-tint); color:var(--coke-red);
+    display:flex; align-items:center; justify-content:center;
+  }
   .upload-box .main-txt{font-size:13.5px; font-weight:600;}
   .upload-box .sub-txt{font-size:12px; color:var(--grey-500); margin-top:2px;}
   .preview-row{
@@ -336,13 +498,18 @@
     background:var(--white); font-size:13px; font-weight:600; color:var(--ink);
     cursor:pointer; transition:all .15s ease; user-select:none;
   }
-  .brand-chip .sw{width:10px; height:10px; border-radius:50%; flex:none;}
+  .brand-chip .brand-bottle{flex:none; display:block;}
   .brand-chip:hover{border-color:var(--coke-red); transform:translateY(-1px);}
   .brand-chip.active{
     background:var(--ink); border-color:var(--ink); color:var(--white);
     box-shadow:0 8px 16px -8px rgba(0,0,0,0.4);
   }
-  .brand-chip.active .sw{box-shadow:0 0 0 2px rgba(255,255,255,0.5);}
+  .brand-chip.active .brand-bottle{filter:brightness(1.35) drop-shadow(0 0 3px rgba(255,255,255,0.55));}
+  .brand-chip-more{
+    border-style:dashed; color:var(--grey-700); font-weight:600;
+    background:var(--grey-100);
+  }
+  .brand-chip-more:hover{border-color:var(--grey-700); color:var(--ink); transform:none;}
 
   .size-chip-row{
     display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;
@@ -365,7 +532,7 @@
     background:var(--white); padding:0 14px;
   }
   .combo-input:focus-within{border-color:var(--coke-red); box-shadow:0 0 0 3px rgba(227,0,22,0.12);}
-  .combo-swatch{width:11px; height:11px; border-radius:50%; flex:none;}
+  .combo-swatch{width:12px; height:17px; flex:none; display:inline-flex; align-items:center; justify-content:center;}
   .combo-input input{border:none; padding:13px 0; flex:1; min-width:0;}
   .combo-input input:focus{outline:none; box-shadow:none;}
   .combo-clear{
@@ -381,11 +548,83 @@
   }
   .combo-panel.open{display:block;}
   .combo-opt{display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:13.5px; cursor:pointer;}
-  .combo-opt .sw{width:9px; height:9px; border-radius:50%; flex:none;}
+  .combo-opt .brand-bottle{flex:none;}
   .combo-opt b{font-weight:600;}
   .combo-opt span.size-tag{margin-left:auto; font-size:11.5px; color:var(--grey-500); background:var(--grey-100); padding:2px 8px; border-radius:10px;}
   .combo-opt:hover, .combo-opt.hi{background:var(--coke-red-tint);}
   .combo-empty{padding:12px 14px; font-size:13px; color:var(--grey-500);}
+
+  /* ---------- Multi-photo grid (Photo of the issue) ---------- */
+  .photo-grid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
+  .photo-thumb{
+    position:relative; width:76px; height:76px; border-radius:var(--radius-m);
+    overflow:hidden; border:1px solid var(--grey-300); flex:none;
+  }
+  .photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .photo-thumb .rm{
+    position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%;
+    background:rgba(20,20,20,0.72); color:#fff; font-size:12px; line-height:1;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; border:none;
+  }
+  .photo-thumb .rm:hover{background:var(--coke-red);}
+  .photo-count-note{font-size:11.5px; color:var(--grey-500); margin-top:4px;}
+
+  /* ---------- Batch code sample photo + lightbox ---------- */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,10,10,0.55);
+    z-index:100; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-close{
+    position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%;
+    background:var(--grey-100); border:none; color:var(--ink); font-size:13px; cursor:pointer;
+  }
+  .modal-close:hover{background:var(--grey-300);}
+  .lightbox-card{
+    background:transparent; box-shadow:none; padding:0; max-width:min(92vw,720px); width:auto;
+    position:relative;
+  }
+  .lightbox-card img{
+    display:block; max-width:100%; max-height:85vh; width:auto; margin:0 auto;
+    border-radius:var(--radius-m); box-shadow:0 30px 80px -20px rgba(0,0,0,0.6);
+    background:var(--white);
+  }
+  .lightbox-card .modal-close{top:-14px; right:-14px; background:var(--white); box-shadow:0 6px 16px rgba(0,0,0,0.25);}
+  .photo-thumb img, .preview-row img{cursor:zoom-in;}
+
+  /* Sample photo shown directly beside the batch-code input, not hidden behind a link.
+     The photo is paired with (and vertically centered against) just the input itself —
+     the hint/badge/error text flows full-width underneath both, instead of being
+     squeezed into a narrow second column next to a much taller photo. */
+  .batch-code-layout{display:flex; gap:14px; align-items:center;}
+  .batch-code-layout input#batchCode{flex:1; min-width:0;}
+  .batch-sample-thumb{
+    flex:none; width:88px; height:88px; padding:0; margin:0; position:relative;
+    border-radius:var(--radius-s); overflow:hidden; cursor:zoom-in;
+    border:1.5px solid var(--grey-200); background:var(--grey-100);
+    box-shadow:0 4px 14px -6px rgba(0,0,0,0.18);
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .batch-sample-thumb:hover{transform:translateY(-2px); box-shadow:0 10px 22px -8px rgba(0,0,0,0.28); border-color:var(--coke-red);}
+  .batch-sample-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .batch-sample-tag{
+    position:absolute; left:4px; bottom:4px; padding:2px 7px; border-radius:20px;
+    background:var(--coke-red); color:var(--white); font-size:9px; font-weight:700;
+    letter-spacing:0.3px; text-transform:uppercase; box-shadow:0 2px 6px rgba(0,0,0,0.25);
+  }
+  /* Graceful fallback if the sample photo URL ever fails to load — shows a clean
+     icon + caption instead of the browser's default broken-image icon. */
+  .batch-sample-thumb img{ color:transparent; }
+  .batch-sample-fallback{
+    display:none; position:absolute; inset:0; flex-direction:column; align-items:center;
+    justify-content:center; gap:6px; padding:8px; text-align:center;
+    color:var(--grey-500); background:var(--grey-100);
+  }
+  .batch-sample-fallback svg{width:22px; height:22px; flex:none;}
+  .batch-sample-fallback span{font-size:9.5px; font-weight:600; line-height:1.3;}
+  .batch-sample-thumb.img-broken .batch-sample-fallback{display:flex;}
+  .batch-sample-thumb.img-broken img{display:none;}
+
   .batch-fallback{
     display:none;
     margin-top:12px; padding:14px;
@@ -402,7 +641,13 @@
   .btn-choice-yes:hover{border-color:var(--ink);}
   .btn-choice-no{background:var(--white); border:1.5px solid var(--coke-red); color:var(--coke-red);}
   .btn-choice-no:hover{background:var(--coke-red-tint);}
-  .batch-revert{background:none; border:none; color:var(--coke-red); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; margin-top:10px;}
+  .batch-revert-btn{
+    display:inline-flex; align-items:center; gap:7px;
+    background:var(--coke-red-tint); border:1.5px solid rgba(227,0,22,0.25); color:var(--coke-red-dark);
+    font-weight:700; font-size:12.5px; cursor:pointer; padding:9px 16px;
+    border-radius:20px; margin-top:12px; transition:background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .batch-revert-btn:hover{background:rgba(227,0,22,0.16); border-color:var(--coke-red); transform:translateY(-1px);}
   .word-counter{font-size:12px; color:var(--grey-500); text-align:right; margin-top:5px;}
   .word-counter.limit{color:var(--danger); font-weight:600;}
 
@@ -441,6 +686,16 @@
   .form-footnote{font-size:11.5px; color:var(--grey-500); text-align:center; margin-top:16px;}
   .submit-error-msg{font-size:12.5px; color:var(--danger); text-align:center; margin-top:12px;}
 
+  /* Invisible reCAPTCHA: we hide Google's floating corner badge and show this
+     text instead, which Google's terms require whenever the badge is hidden. */
+  .grecaptcha-badge{ visibility:hidden; }
+  .recaptcha-notice{
+    font-size:11px; line-height:1.5; color:var(--grey-500);
+    text-align:center; margin-top:14px;
+  }
+  .recaptcha-notice a{ color:var(--grey-700); text-decoration:underline; }
+  .recaptcha-notice a:hover{ color:var(--coke-red); }
+
   #fld-consent .consent-row{
     display:flex; align-items:flex-start; gap:12px;
     cursor:pointer; font-weight:400; margin-bottom:0;
@@ -469,21 +724,31 @@
   #fld-consent.invalid .consent-box{border-color:var(--danger);}
   #fld-consent .error-text{margin-left:34px;}
 
-  /* Success screen */
+  /* Success screen — this is where a little visual warmth actually belongs:
+     the news here is good, so it's a nicer place for a soft glow/flourish
+     than the entry screen someone lands on while still frustrated. */
   .success-card{display:none; text-align:center; padding:20px 6px;}
   .success-card.show{display:block;}
+  @keyframes successPop{
+    0%{ transform:scale(0.5); opacity:0; }
+    70%{ transform:scale(1.08); opacity:1; }
+    100%{ transform:scale(1); opacity:1; }
+  }
   .success-icon{
     width:64px; height:64px; border-radius:50%;
     background:var(--success-tint); color:var(--success);
     display:flex; align-items:center; justify-content:center;
     margin:0 auto 20px; font-size:30px;
+    box-shadow:0 0 0 10px rgba(20,108,46,0.08);
+    animation:successPop .5s cubic-bezier(.2,.8,.3,1.2);
   }
   .success-card h2{margin-bottom:8px;}
   .success-card p{color:var(--grey-700); font-size:14.5px; max-width:380px; margin:0 auto 18px;}
   .ref-box{
     display:inline-block; background:var(--grey-100); border:1.5px dashed var(--coke-red);
     border-radius:var(--radius-s); padding:10px 18px; font-weight:700; letter-spacing:0.5px;
-    margin-bottom:22px; font-family:'Fredoka',sans-serif; color:var(--coke-red-dark);
+    margin-bottom:22px; font-family:'Plus Jakarta Sans',sans-serif; color:var(--coke-red-dark);
+    box-shadow:0 0 26px -4px rgba(227,0,22,0.22);
   }
 
 
@@ -500,11 +765,31 @@
     .reassure-list{display:none;}
     .form-panel{padding:0;}
     .form-shell{max-width:100%; margin-top:-34px;}
-    .form-card{border-radius:16px 16px 0 0; padding:28px 20px 26px;}
+    .form-card{border-radius:16px 16px 0 0; padding:40px 20px 26px;}
+
+    /* Prevent iOS Safari's auto-zoom-on-focus (font-size <16px triggers it),
+       which is the main cause of the page appearing to "jump"/misalign
+       whenever a field is tapped on a phone. */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea{
+      font-size:16px;
+    }
   }
   @media (max-width: 480px){
-    .form-card{padding:22px 16px 24px;}
-    .otp-block input{flex:0 0 110px;}
+    .form-card{padding:36px 16px 24px;}
+    .otp-block input{flex:1 1 100px; max-width:140px; min-width:90px;}
+
+    /* Now that the photo pairs only with the input (not the taller hint/error
+       column), the row stays comfortably side-by-side even on small phones —
+       just trim the thumb a little further for breathing room. */
+    .batch-sample-thumb{width:72px; height:72px;}
+
+    /* Radio pills and issue-category chips: tighten padding slightly so
+       two comfortably fit per row instead of one oversized pill per row. */
+    .radio-option{padding:11px 18px 11px 14px;}
   }
 </style>
 </head>
@@ -515,7 +800,7 @@
   <!-- BRAND PANEL -->
   <div class="brand-panel">
     <div class="rings" aria-hidden="true"></div>
-    <div class="brand-mark">HCCB <span>Care</span></div>
+    <div class="brand-mark"><img src="data:image/png;base64,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" alt="Hindustan Coca-Cola Beverages" class="brand-logo-img"></div>
 
     <div class="brand-copy">
       <h1>Tell us what went wrong. We'll take it from here.</h1>
@@ -545,16 +830,20 @@
           <p class="form-sub" id="stepSubtext">Step 1 of 3 — a few details about you</p>
 
           <div class="stepper" aria-hidden="true">
-            <div class="node active" data-node="1">1</div>
+            <div class="step-item">
+              <div class="node active" data-node="1">1</div>
+              <div class="step-label active" data-label="1">Your details</div>
+            </div>
             <div class="line" data-line="1"></div>
-            <div class="node" data-node="2">2</div>
+            <div class="step-item">
+              <div class="node" data-node="2">2</div>
+              <div class="step-label" data-label="2">Product info</div>
+            </div>
             <div class="line" data-line="2"></div>
-            <div class="node" data-node="3">3</div>
-          </div>
-          <div class="stepper-labels">
-            <span class="active" data-label="1">Your details</span>
-            <span data-label="2">Product info</span>
-            <span data-label="3">Issue details</span>
+            <div class="step-item">
+              <div class="node" data-node="3">3</div>
+              <div class="step-label" data-label="3">Issue details</div>
+            </div>
           </div>
 
           <form id="issueForm" novalidate>
@@ -569,7 +858,7 @@
               </div>
 
               <div class="field" id="fld-phone">
-                <label for="phone">Phone number <span class="req" id="phoneReqMark">*</span><span class="opt" id="phoneOptMark" hidden>(optional)</span></label>
+                <label for="phone">Phone number <span class="req" id="phoneReqMark">*</span></label>
                 <div class="phone-row">
                   <input type="tel" id="phone" name="phone" inputmode="numeric" maxlength="10" placeholder="10‑digit mobile number">
                   <button type="button" class="btn-ghost-sm" id="sendOtpBtn" disabled>Send OTP</button>
@@ -592,15 +881,14 @@
               </div>
 
               <div class="field" id="fld-email">
-                <label for="email">Email ID <span class="req" id="emailReqMark">*</span><span class="opt" id="emailOptMark" hidden>(optional)</span></label>
+                <label for="email">Email ID <span class="req" id="emailReqMark">*</span></label>
                 <input type="email" id="email" name="email" placeholder="you@example.com">
                 <div class="hint" id="emailHint" hidden>Auto‑filled from your account</div>
-                <div class="hint" id="contactHint">Add at least one — your email or a verified phone number.</div>
                 <div class="error-text">Enter a valid email address.</div>
               </div>
 
               <div class="field" id="fld-city">
-                <label for="city">City <span class="opt">(optional)</span></label>
+                <label for="city">City</label>
                 <input type="text" id="city" name="city" placeholder="e.g., Bengaluru">
               </div>
 
@@ -608,16 +896,16 @@
                 <label>Are you a? <span class="req">*</span></label>
                 <div class="radio-group" role="radiogroup" aria-label="Are you a?">
                   <label class="radio-option">
-                    <input type="radio" name="role" value="Distributor"><span class="radio-dot"></span>Distributor
+                    <input type="radio" name="role" value="Distributor"><span class="radio-dot"></span><span class="radio-label-text">Distributor</span>
                   </label>
                   <label class="radio-option">
-                    <input type="radio" name="role" value="Retailer"><span class="radio-dot"></span>Retailer
+                    <input type="radio" name="role" value="Retailer"><span class="radio-dot"></span><span class="radio-label-text">Retailer</span>
                   </label>
                   <label class="radio-option">
-                    <input type="radio" name="role" value="Employee"><span class="radio-dot"></span>Employee
+                    <input type="radio" name="role" value="MGR"><span class="radio-dot"></span><span class="radio-label-text">MGR</span>
                   </label>
                   <label class="radio-option">
-                    <input type="radio" name="role" value="Others"><span class="radio-dot"></span>Others
+                    <input type="radio" name="role" value="Employee"><span class="radio-dot"></span><span class="radio-label-text">Employee</span>
                   </label>
                 </div>
                 <div class="hint" id="roleAutoHint" hidden>Auto‑detected from the DMS portal</div>
@@ -625,7 +913,7 @@
               </div>
 
               <div class="field" id="fld-empid" hidden>
-                <label for="empId">ID number <span class="opt">(optional)</span></label>
+                <label for="empId">ID number</label>
                 <input type="text" id="empId" name="empId" placeholder="e.g., DIST10234">
                 <div class="id-format-note" id="idFormatNote"></div>
               </div>
@@ -661,8 +949,23 @@
 
               <div class="field" id="fld-batchtext">
                 <label for="batchCode">Batch code <span class="req" id="batchReqStar">*</span></label>
-                <input type="text" id="batchCode" name="batchCode" required autocomplete="off" placeholder="Enter batch code" style="text-transform:uppercase; letter-spacing:1.5px; font-weight:600;">
-                <div class="hint">Printed near the cap or base of the bottle.</div>
+                <div class="batch-code-layout">
+                  <input type="text" id="batchCode" name="batchCode" required autocomplete="off" placeholder="Enter batch code" style="text-transform:uppercase; letter-spacing:1.5px; font-weight:600;">
+                  <button type="button" class="batch-sample-thumb" id="batchSampleThumb" aria-label="View a larger sample photo of where the batch code is printed">
+                    <img src="https://kapture-p-v2.storage.googleapis.com/1000284/repository-file-attachments/0926/17884459736660hqxx2srjmc/kinley_BN__207588_1788445973666.jpg" alt="Sample: batch code printed near the cap of a bottle" title="Click to view full size" onerror="this.closest('.batch-sample-thumb').classList.add('img-broken')">
+                    <div class="batch-sample-fallback" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8a2 2 0 0 1 2-2h1.2a1 1 0 0 0 .86-.49l.88-1.47A1 1 0 0 1 9.8 3.5h4.4a1 1 0 0 1 .86.55l.88 1.46a1 1 0 0 0 .86.49H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                      <span>Sample photo</span>
+                    </div>
+                    <span class="batch-sample-tag">Sample</span>
+                  </button>
+                </div>
+                <!-- Not shown to the person filling the form — auto-derived from the batch code
+                     (the plant-code pair, e.g. "K1" out of "G28K1A1A") for the backend/Kapture payload. -->
+                <input type="hidden" id="batchPlantCode" name="batchPlantCode" value="">
+                <!-- Also backend-only: characters 5 and 6 of the 8-character batch code. -->
+                <input type="hidden" id="batchChar56" name="batchChar56" value="">
+                <div class="hint">Printed near the cap or base of the bottle — see the sample photo alongside.</div>
                 <span class="badge verified" id="batchValidBadge" style="margin-top:8px;" hidden>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
                   Valid batch code
@@ -671,25 +974,28 @@
                 <div class="error-text" id="batchError">Oops, that doesn't look like a batch code. Please try again.</div>
 
                 <div class="batch-fallback" id="batchFallback">
-                  <p>Still not matching after 5 tries — do you have the batch code with you?</p>
+                  <p>Oops — we're not able to match that batch code. No worries, you can upload a photo of it instead.</p>
                   <div class="choice-row">
-                    <button type="button" class="btn-choice-yes" id="batchHasCodeYes">Yes, let me retry</button>
-                    <button type="button" class="btn-choice-no" id="batchHasCodeNo">No, I don't have it</button>
+                    <button type="button" class="btn-choice-yes" id="batchHasCodeYes">Let me try again</button>
+                    <button type="button" class="btn-choice-no" id="batchHasCodeNo">Upload a photo instead</button>
                   </div>
                 </div>
-                <button type="button" class="batch-revert" id="batchRevertBtn" hidden>Actually, I do have it — let me enter it</button>
+                <button type="button" class="batch-revert-btn" id="batchRevertBtn" hidden>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5A5.5 5.5 0 0 1 20 14.5v0A5.5 5.5 0 0 1 14.5 20H11"/></svg>
+                  Enter the code instead
+                </button>
               </div>
 
-              <div class="field" id="fld-batchimg">
+              <div class="field" id="fld-batchimg" hidden>
                 <label>Photo of the batch code <span class="req">*</span></label>
                 <label class="upload-box" for="batchImage">
-                  <div class="icon">📷</div>
+                  <div class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8a2 2 0 0 1 2-2h1.2a1 1 0 0 0 .86-.49l.88-1.47A1 1 0 0 1 9.8 3.5h4.4a1 1 0 0 1 .86.55l.88 1.46a1 1 0 0 0 .86.49H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
                   <div class="main-txt">Tap to capture the batch code</div>
                   <div class="sub-txt">Make sure the printed code is clear and in focus</div>
                   <input type="file" id="batchImage" accept="image/*" capture="environment">
                 </label>
                 <div class="preview-row" id="batchPreview" hidden>
-                  <img id="batchPreviewImg" alt="">
+                  <img id="batchPreviewImg" alt="" title="Click to view full size">
                   <div class="meta" id="batchPreviewName"></div>
                   <button type="button" id="batchRemove">Remove</button>
                 </div>
@@ -706,19 +1012,27 @@
             <div class="step" data-step="3" hidden>
 
               <div class="field" id="fld-issueimg">
-                <label>Photo of the issue <span class="req">*</span></label>
-                <label class="upload-box" for="issueImage">
-                  <div class="icon">🖼️</div>
+                <label>Photo of the issue with the product <span class="req">*</span></label>
+                <label class="upload-box" for="issueImage" id="issueUploadBox">
+                  <div class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M3 15l4-4 3 3 3-3.5L17 14"/><circle cx="8" cy="9" r="1.4" fill="currentColor" stroke="none"/><path d="M8 3h10a2 2 0 0 1 2 2v10" opacity="0.55"/></svg></div>
                   <div class="main-txt" id="issueUploadTxt">Tap to take a photo</div>
                   <div class="sub-txt" id="issueUploadSub">Please use your camera to capture the issue live</div>
                   <input type="file" id="issueImage" accept="image/*">
                 </label>
-                <div class="preview-row" id="issuePreview" hidden>
-                  <img id="issuePreviewImg" alt="">
-                  <div class="meta" id="issuePreviewName"></div>
-                  <button type="button" id="issueRemove">Remove</button>
+                <div class="photo-grid" id="issuePhotoGrid" hidden></div>
+                <div class="hint" id="issuePhotoHint" hidden>Up to 5 photos — tap the box again to add more.</div>
+                <div class="error-text">Please attach at least one photo of the issue.</div>
+              </div>
+
+              <div class="field" id="fld-issueregarding">
+                <label>Issue is regarding</label>
+                <div class="issue-cat-picker">
+                  <div class="issue-cat-row l1" id="issueL1Row" role="listbox" aria-label="Choose a category"></div>
+                  <div class="issue-cat-caption" id="issueL2Caption" hidden>Pick a category</div>
+                  <div class="issue-cat-row" id="issueL2Row" hidden></div>
+                  <div class="issue-cat-caption" id="issueL3Caption" hidden>Get more specific (optional)</div>
+                  <div class="issue-cat-row" id="issueL3Row" hidden></div>
                 </div>
-                <div class="error-text">Please attach a photo of the issue.</div>
               </div>
 
               <div class="field" id="fld-desc">
@@ -740,6 +1054,15 @@
               <div class="btn-row">
                 <button type="button" class="btn-secondary" data-back="2">Back</button>
                 <button type="submit" class="btn-primary" id="submitBtn">Submit report</button>
+              </div>
+              <!-- Invisible reCAPTCHA widget mounts here. It renders no visible UI of its
+                   own (size:'invisible'); it's just an anchor point for grecaptcha.render(). -->
+              <div id="recaptchaContainer"></div>
+              <div class="recaptcha-notice">
+                Invisible reCAPTCHA is used on this site. See Google's
+                <a href="https://www.google.com/intl/en/policies/privacy/" target="_blank" rel="noopener">Privacy Policy</a>
+                and
+                <a href="https://www.google.com/intl/en/policies/terms/" target="_blank" rel="noopener">Terms of Use</a>.
               </div>
               <div class="submit-error-msg" id="submitError" hidden>Something went wrong sending your report. Please check your connection and try again.</div>
             </div>
@@ -764,12 +1087,20 @@
 
 </div>
 
+<!-- Image lightbox: click any uploaded photo thumbnail to view it full size -->
+<div class="modal-overlay" id="imgLightbox">
+  <div class="lightbox-card">
+    <button type="button" class="modal-close" id="imgLightboxClose" aria-label="Close">✕</button>
+    <img id="imgLightboxImg" src="" alt="Full size preview">
+  </div>
+</div>
+
 <script>
 (function(){
   const steps = Array.from(document.querySelectorAll('.step'));
   const nodes = Array.from(document.querySelectorAll('.stepper .node'));
   const lines = Array.from(document.querySelectorAll('.stepper .line'));
-  const labels = Array.from(document.querySelectorAll('.stepper-labels span'));
+  const labels = Array.from(document.querySelectorAll('.stepper .step-label'));
   const stepSubtext = document.getElementById('stepSubtext');
   const subtextByStep = {
     1: "Step 1 of 3 — a few details about you",
@@ -815,14 +1146,15 @@
   const empIdInput = document.getElementById('empId');
   const idFormatNote = document.getElementById('idFormatNote');
   const placeholders = {
-    Distributor: 'e.g., DIST10234',
-    Retailer: 'e.g., RET5567',
-    Employee: 'e.g., EMP2231'
+    Distributor: 'e.g. 05002985XX (10 digits, refer to your DMS/purchase invoice)',
+    Retailer: 'e.g. 05002985XX (10 digits, refer to your tax invoice)',
+    MGR: 'e.g. 018534 (6 digits market id, refer on home screen of SFA app)',
+    Employee: 'e.g. 235XX (Employee ID on your iCard)'
   };
   function onRoleChange(){
     const val = getRole();
     showError(document.getElementById('fld-role'), false);
-    if(val === 'Distributor' || val === 'Retailer' || val === 'Employee'){
+    if(val === 'Distributor' || val === 'Retailer' || val === 'MGR' || val === 'Employee'){
       empIdField.hidden = false;
       empIdInput.placeholder = placeholders[val];
       idFormatNote.textContent = '';
@@ -863,10 +1195,7 @@
 
   // ---------- Email <-> Phone: either one is required, not both ----------
   const emailReqMark = document.getElementById('emailReqMark');
-  const emailOptMark = document.getElementById('emailOptMark');
   const phoneReqMark = document.getElementById('phoneReqMark');
-  const phoneOptMark = document.getElementById('phoneOptMark');
-  const contactHint = document.getElementById('contactHint');
 
   function isEmailValid(){
     return emailField.value.trim() !== '' && emailField.checkValidity();
@@ -877,14 +1206,11 @@
 
     emailField.required = !phoneOk;
     emailReqMark.hidden = phoneOk;
-    emailOptMark.hidden = !phoneOk;
 
     phone.required = !emailOk;
     phoneReqMark.hidden = emailOk;
-    phoneOptMark.hidden = !emailOk;
 
     if(emailOk || phoneOk){
-      contactHint.classList.remove('err-emphasis');
       document.getElementById('fld-email').classList.remove('needs-contact');
       document.getElementById('fld-phone').classList.remove('needs-contact');
       showError(document.getElementById('fld-email'), false);
@@ -949,29 +1275,71 @@
   });
   updateContactRequirement();
 
+  // Format guidance per role. Distributor/Retailer use a 10-digit DMS/tax-invoice id,
+  // MGR uses a 6-digit market id, and Employee id length varies by iCard — so that one
+  // gets a soft digit check rather than a hard length match.
+  const ID_FORMAT_CHECKS = {
+    Distributor: { re: /^\d{10}$/, msg: 'Expected format: 10 digits, e.g. 05002985XX.' },
+    Retailer: { re: /^\d{10}$/, msg: 'Expected format: 10 digits, e.g. 05002985XX.' },
+    MGR: { re: /^\d{6}$/, msg: 'Expected format: 6-digit market id, e.g. 018534.' },
+    Employee: { re: /^\d{3,8}$/, msg: 'Enter the Employee ID as shown on your iCard.' }
+  };
   empIdInput.addEventListener('input', () => {
-    if(getRole() === 'Employee' && empIdInput.value.trim().length > 0){
-      const ok = /^EMP\d{3,6}$/i.test(empIdInput.value.trim());
-      idFormatNote.textContent = ok ? 'Format looks right.' : 'Expected format: EMP followed by digits, e.g. EMP2231.';
+    const role = getRole();
+    const check = ID_FORMAT_CHECKS[role];
+    const val = empIdInput.value.trim();
+    if(check && val.length > 0){
+      const ok = check.re.test(val);
+      idFormatNote.textContent = ok ? 'Format looks right.' : check.msg;
       idFormatNote.className = 'id-format-note ' + (ok ? 'ok' : 'bad');
     } else {
       idFormatNote.textContent = '';
     }
   });
 
-  // ---------- Brand & size: creative two-tier picker ----------
   const PRODUCTS = {
-    "Coca-Cola":      { color:"#E30016", sizes:["250 ml","600 ml","750 ml","1.25 L","2.25 L"] },
-    "Thums Up":       { color:"#141212", sizes:["250 ml","600 ml","750 ml","1.25 L"] },
-    "Sprite":         { color:"#00A652", sizes:["250 ml","600 ml","750 ml","1.25 L"] },
-    "Fanta":          { color:"#FF7A00", sizes:["250 ml","600 ml","750 ml"] },
-    "Limca":          { color:"#1E7A3C", sizes:["250 ml","600 ml","750 ml"] },
-    "Maaza":          { color:"#FFC20E", sizes:["250 ml","600 ml","1.2 L"] },
-    "Minute Maid":    { color:"#F5A300", sizes:["200 ml","250 ml"] },
-    "Kinley Water":   { color:"#0072BC", sizes:["500 ml","1 L","2 L"] },
-    "Georgia":        { color:"#6F4E37", sizes:["250 ml"] },
-    "Monster Energy": { color:"#1AA13A", sizes:["350 ml"] }
+    "Aquarius": { color:"#F2A900", sizes:["250 ML", "400 ML"] },
+    "BODYARMOR ZERO SUGAR": { color:"#1B3A6B", sizes:["200 ML"] },
+    "Bonaqua": { color:"#4FA8D8", sizes:["500 ML", "1 LTR"] },
+    "Burn": { color:"#FF4E00", sizes:["250 ML", "300 ML", "330 ML"] },
+    "CHARGED BY THUMS UP": { color:"#C8102E", sizes:["180 ML", "200 ML"] },
+    "Citra": { color:"#FFD400", sizes:["600 ML", "1.25 LTR", "2 LTR"] },
+    "Coca-Cola": { color:"#E30016", sizes:["150 ML", "180 ML", "200 ML", "250 ML", "255 ML", "300 ML", "330 ML", "350 ML", "400 ML", "500 ML", "600 ML", "740 ML", "750 ML", "1 LTR", "1.25 LTR", "1.5 LTR", "1.75 LTR", "1.8 LTR", "2 LTR", "2.25 LTR", "2.5 LTR", "10 LTR", "18 LTR", "20 LTR"] },
+    "Coke Zero": { color:"#1A1A1A", sizes:["180 ML", "200 ML", "250 ML", "255 ML", "300 ML", "330 ML", "350 ML", "400 ML", "600 ML", "750 ML", "1.25 LTR", "10 LTR"] },
+    "Crush": { color:"#FF7F00", sizes:["300 ML", "600 ML", "1.25 LTR", "2 LTR"] },
+    "Diet Coke": { color:"#B0B0B0", sizes:["180 ML", "200 ML", "300 ML", "330 ML", "350 ML", "400 ML", "500 ML", "600 ML", "10 LTR", "18 LTR"] },
+    "Diet Schweppes-KO": { color:"#A8C7DC", sizes:["300 ML"] },
+    "Fanta Orange": { color:"#FF7A00", sizes:["150 ML", "180 ML", "200 ML", "250 ML", "282 ML", "300 ML", "330 ML", "350 ML", "400 ML", "475 ML", "500 ML", "595 ML", "600 ML", "740 ML", "750 ML", "1 LTR", "1.25 LTR", "1.5 LTR", "1.75 LTR", "2 LTR", "2.25 LTR", "2.5 LTR", "10 LTR", "18 LTR", "20 LTR"] },
+    "Fanta Other": { color:"#FFB347", sizes:["200 ML", "250 ML", "300 ML", "350 ML", "400 ML", "500 ML", "600 ML", "750 ML", "1.25 LTR", "2.25 LTR", "10 LTR"] },
+    "Fuze Tea": { color:"#7A9A45", sizes:["250 ML"] },
+    "Georgia": { color:"#6F4E37", sizes:["15 GM", "25 GM", "250 GM", "1 KG", "10 LTR"] },
+    "Georgia Gold": { color:"#C9A227", sizes:["15 GM", "250 GM", "1 KG"] },
+    "Glaceau Smartwater": { color:"#6EC1E4", sizes:["500 ML", "750 ML", "1 LTR"] },
+    "Kinley Soda": { color:"#00A9E0", sizes:["200 ML", "250 ML", "300 ML", "330 ML", "350 ML", "400 ML", "500 ML", "600 ML", "750 ML", "1.25 LTR", "1.5 LTR", "1.75 LTR", "2.25 LTR"] },
+    "Kinley Water": { color:"#0072BC", sizes:["250 ML", "300 ML", "500 ML", "750 ML", "1 LTR", "2 LTR", "20 LTR", "25 LTR"] },
+    "Limca": { color:"#1E7A3C", sizes:["135 ML", "150 ML", "180 ML", "200 ML", "250 ML", "300 ML", "330 ML", "350 ML", "400 ML", "475 ML", "500 ML", "600 ML", "740 ML", "750 ML", "1 LTR", "1.25 LTR", "1.5 LTR", "1.75 LTR", "2 LTR", "2.25 LTR", "2.5 LTR", "10 LTR", "18 LTR", "20 LTR"] },
+    "LIMCA SPORTZ": { color:"#2FA84F", sizes:["500 ML"] },
+    "Maaza": { color:"#FFC20E", sizes:["100 ML", "125 ML", "135 ML", "150 ML", "180 ML", "200 ML", "240 ML", "250 ML", "300 ML", "400 ML", "475 ML", "600 ML", "750 ML", "850 ML", "1 LTR", "1.2 LTR", "1.5 LTR", "1.75 LTR"] },
+    "Minute Maid": { color:"#F5A300", sizes:["125 ML", "135 ML", "150 ML", "200 ML", "240 ML", "250 ML", "300 ML", "400 ML", "600 ML", "750 ML", "1 LTR", "1.5 LTR"] },
+    "Minute Maid Pulpy": { color:"#FF8C00", sizes:["200 ML", "240 ML", "250 ML", "300 ML", "400 ML", "475 ML", "600 ML", "750 ML", "850 ML", "1 LTR", "1.5 LTR"] },
+    "Monster": { color:"#1AA13A", sizes:["350 ML"] },
+    "Monster-KO": { color:"#158A30", sizes:["350 ML"] },
+    "Multi Brand": { color:"#8B8B8B", sizes:["200 ML", "240 ML", "250 ML", "330 ML", "400 ML", "600 ML", "1 LTR"] },
+    "Nestea": { color:"#C79A3D", sizes:["400 ML"] },
+    "Perfect Fruit": { color:"#E85D75", sizes:["7 LTR"] },
+    "Powerade": { color:"#0033A0", sizes:["250 ML", "500 ML"] },
+    "PREDATOR-KO": { color:"#4B0082", sizes:["250 ML", "300 ML", "346 ML", "350 ML"] },
+    "RANI": { color:"#FF6F3C", sizes:["180 ML"] },
+    "Rimzim": { color:"#8E44AD", sizes:["250 ML", "400 ML", "600 ML", "1 LTR", "1.25 LTR", "2.25 LTR"] },
+    "Schweppes-KO": { color:"#003DA5", sizes:["200 ML", "250 ML", "300 ML", "500 ML", "600 ML", "1 LTR"] },
+    "Sprite": { color:"#00A652", sizes:["180 ML", "200 ML", "250 ML", "300 ML", "330 ML", "350 ML", "400 ML", "475 ML", "500 ML", "595 ML", "600 ML", "740 ML", "750 ML", "1 LTR", "1.25 LTR", "1.5 LTR", "1.75 LTR", "2 LTR", "2.25 LTR", "2.5 LTR", "10 LTR", "18 LTR", "20 LTR"] },
+    "Sprite Zero": { color:"#00C853", sizes:["180 ML", "200 ML", "250 ML", "300 ML", "330 ML", "400 ML", "750 ML"] },
+    "Thums Up": { color:"#141212", sizes:["180 ML", "200 ML", "250 ML", "300 ML", "330 ML", "350 ML", "400 ML", "475 ML", "500 ML", "600 ML", "740 ML", "750 ML", "1 LTR", "1.25 LTR", "1.5 LTR", "1.75 LTR", "2 LTR", "2.25 LTR", "2.5 LTR", "10 LTR", "18 LTR", "20 LTR"] },
+    "Vio": { color:"#E91E8C", sizes:["180 ML", "200 ML"] },
+    "Vio Soda": { color:"#D81B60", sizes:["330 ML"] },
   };
+
+  const POPULAR_BRANDS = ["Coca-Cola", "Thums Up", "Sprite", "Fanta Orange", "Limca", "Maaza", "Kinley Water", "Minute Maid", "Coke Zero", "Georgia"];
   const ALL_ITEMS = Object.entries(PRODUCTS).flatMap(([brand, info]) =>
     info.sizes.map(size => ({ brand, size, color: info.color, label: brand + ' ' + size }))
   );
@@ -985,16 +1353,44 @@
   const brandHidden = document.getElementById('brandSize');
   const brandField = document.getElementById('fld-brand');
   let activeBrand = null, hiIndex = -1, filteredItems = [];
+  let allBrandsShown = false;
 
-  Object.entries(PRODUCTS).forEach(([brand, info]) => {
+  const BRAND_BOTTLE_SVG = '<svg class="brand-bottle" viewBox="0 0 14 20" width="11" height="16" style="color:COLOR"><path fill="currentColor" d="M5.5 0h3v2.1c0 .35.14.68.38.93l.6 1.02c.6.6.92 1.42.92 2.27V18a1.6 1.6 0 0 1-1.6 1.6H5.2A1.6 1.6 0 0 1 3.6 18V6.32c0-.85.32-1.67.92-2.27l.6-1.02c.24-.25.38-.58.38-.93V0Z"/></svg>';
+
+  function makeBrandChip(brand, info){
     const chip = document.createElement('div');
     chip.className = 'brand-chip';
     chip.setAttribute('role','option');
     chip.dataset.brand = brand;
-    chip.innerHTML = '<span class="sw" style="background:' + info.color + '"></span>' + brand;
+    chip.innerHTML = BRAND_BOTTLE_SVG.replace('COLOR', info.color) + brand;
     chip.addEventListener('click', () => selectBrand(brand));
-    brandChipRow.appendChild(chip);
-  });
+    return chip;
+  }
+
+  function renderBrandChips(){
+    brandChipRow.innerHTML = '';
+    const brandsToShow = allBrandsShown ? Object.keys(PRODUCTS) : POPULAR_BRANDS;
+    brandsToShow.forEach(brand => {
+      brandChipRow.appendChild(makeBrandChip(brand, PRODUCTS[brand]));
+    });
+    if(activeBrand){
+      Array.from(brandChipRow.children).forEach(c => c.classList.toggle('active', c.dataset.brand === activeBrand));
+    }
+    if(!allBrandsShown){
+      const more = document.createElement('div');
+      more.className = 'brand-chip brand-chip-more';
+      more.textContent = 'Show all ' + Object.keys(PRODUCTS).length + ' brands';
+      more.addEventListener('click', () => { allBrandsShown = true; renderBrandChips(); });
+      brandChipRow.appendChild(more);
+    } else {
+      const less = document.createElement('div');
+      less.className = 'brand-chip brand-chip-more';
+      less.textContent = 'Show fewer brands';
+      less.addEventListener('click', () => { allBrandsShown = false; renderBrandChips(); });
+      brandChipRow.appendChild(less);
+    }
+  }
+  renderBrandChips();
 
   function selectBrand(brand){
     activeBrand = brand;
@@ -1016,7 +1412,7 @@
     const info = PRODUCTS[brand];
     brandHidden.value = brand + ' ' + size;
     brandSearch.value = brand + ' ' + size;
-    brandSwatch.style.background = info.color;
+    brandSwatch.innerHTML = BRAND_BOTTLE_SVG.replace('COLOR', info.color);
     brandSwatch.hidden = false;
     brandClear.hidden = false;
     Array.from(sizeChipRow.children).forEach(c => c.classList.toggle('active', c.textContent === size));
@@ -1047,7 +1443,7 @@
       items.forEach((it, i) => {
         const row = document.createElement('div');
         row.className = 'combo-opt' + (i === hiIndex ? ' hi' : '');
-        row.innerHTML = '<span class="sw" style="background:' + it.color + '"></span><b>' + it.brand + '</b>' +
+        row.innerHTML = BRAND_BOTTLE_SVG.replace('COLOR', it.color) + '<b>' + it.brand + '</b>' +
           '<span class="size-tag">' + it.size + '</span>';
         row.addEventListener('mousedown', e => { e.preventDefault(); selectFinal(it.brand, it.size); });
         brandPanel.appendChild(row);
@@ -1083,6 +1479,21 @@
     if(!brandField.contains(e.target)) brandPanel.classList.remove('open');
   });
 
+  // ---------- Image lightbox: tap any thumbnail to pop it open full size ----------
+  const imgLightbox = document.getElementById('imgLightbox');
+  const imgLightboxImg = document.getElementById('imgLightboxImg');
+  const imgLightboxClose = document.getElementById('imgLightboxClose');
+  function openLightbox(src){
+    imgLightboxImg.src = src;
+    imgLightbox.classList.add('show');
+  }
+  function closeLightbox(){
+    imgLightbox.classList.remove('show');
+  }
+  imgLightboxClose.addEventListener('click', closeLightbox);
+  imgLightbox.addEventListener('click', (e) => { if(e.target === imgLightbox) closeLightbox(); });
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeLightbox(); });
+
   // ---------- File uploads with preview ----------
   function wireUpload(inputId, previewRowId, previewImgId, previewNameId, removeBtnId, uploadBoxSelector){
     const input = document.getElementById(inputId);
@@ -1099,37 +1510,99 @@
       nameEl.textContent = file.name;
       row.hidden = false;
     });
+    img.addEventListener('click', () => { if(img.src) openLightbox(img.src); });
     removeBtn.addEventListener('click', () => {
       input.value = '';
       row.hidden = true;
     });
   }
   wireUpload('batchImage','batchPreview','batchPreviewImg','batchPreviewName','batchRemove');
-  wireUpload('issueImage','issuePreview','issuePreviewImg','issuePreviewName','issueRemove');
 
-  // Adjust "issue image" capture behaviour based on role (camera-only for
-  // general public, gallery allowed for internal employees/distributors/retailers,
-  // and for anyone likely on a desktop where camera capture doesn't apply).
+  // ---------- "Photo of the issue": multiple photos, device-based capture mode ----------
+  // Mobile -> camera capture only (one photo per tap, tap again to add more).
+  // Desktop -> normal file picker: camera or gallery, multi-select in one go.
   const issueImageInput = document.getElementById('issueImage');
+  const issueUploadBox = document.getElementById('issueUploadBox');
   const issueUploadTxt = document.getElementById('issueUploadTxt');
   const issueUploadSub = document.getElementById('issueUploadSub');
+  const issuePhotoGrid = document.getElementById('issuePhotoGrid');
+  const issuePhotoHint = document.getElementById('issuePhotoHint');
   const isLikelyMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const MAX_ISSUE_PHOTOS = 5;
+  let issuePhotos = [];
 
   function updateIssueUploadMode(){
-    const role = getRole();
-    const isInternal = (role === 'Employee' || role === 'Distributor' || role === 'Retailer');
-    if(isInternal || !isLikelyMobile){
-      issueImageInput.removeAttribute('capture');
-      issueUploadTxt.textContent = 'Tap to add a photo';
-      issueUploadSub.textContent = 'Choose from your camera or gallery';
-    } else {
+    if(isLikelyMobile){
       issueImageInput.setAttribute('capture','environment');
-      issueUploadTxt.textContent = 'Tap to take a photo';
-      issueUploadSub.textContent = 'Please use your camera to capture the issue live';
+      issueImageInput.removeAttribute('multiple');
+      issueUploadTxt.textContent = issuePhotos.length ? 'Tap to take another photo' : 'Tap to take a photo';
+      issueUploadSub.textContent = 'Camera capture only on mobile';
+    } else {
+      issueImageInput.removeAttribute('capture');
+      issueImageInput.setAttribute('multiple','multiple');
+      issueUploadTxt.textContent = issuePhotos.length ? 'Add more photos' : 'Tap to add a photo';
+      issueUploadSub.textContent = 'Choose from your camera or gallery — select multiple at once';
     }
   }
-  roleRadios.forEach(r => r.addEventListener('change', updateIssueUploadMode));
+
+  function syncIssueInputFiles(){
+    const dt = new DataTransfer();
+    issuePhotos.forEach(f => dt.items.add(f));
+    issueImageInput.files = dt.files;
+  }
+
+  function renderIssuePhotos(){
+    issuePhotoGrid.hidden = issuePhotos.length === 0;
+    issuePhotoGrid.innerHTML = '';
+    issuePhotos.forEach((file, idx) => {
+      const url = URL.createObjectURL(file);
+      const tile = document.createElement('div');
+      tile.className = 'photo-thumb';
+      tile.innerHTML = '<img src="' + url + '" alt="" title="Click to view full size"><button type="button" class="rm" data-idx="' + idx + '">✕</button>';
+      tile.querySelector('img').addEventListener('click', () => openLightbox(url));
+      issuePhotoGrid.appendChild(tile);
+    });
+    issuePhotoGrid.querySelectorAll('.rm').forEach(btn => {
+      btn.addEventListener('click', () => {
+        issuePhotos.splice(Number(btn.dataset.idx), 1);
+        syncIssueInputFiles();
+        renderIssuePhotos();
+        updateIssueUploadMode();
+        toggleIssueBoxVisibility();
+      });
+    });
+    issuePhotoHint.hidden = issuePhotos.length === 0;
+    showError(document.getElementById('fld-issueimg'), false);
+  }
+
+  function toggleIssueBoxVisibility(){
+    issueUploadBox.style.display = issuePhotos.length >= MAX_ISSUE_PHOTOS ? 'none' : '';
+  }
+
+  issueImageInput.addEventListener('change', () => {
+    const picked = Array.from(issueImageInput.files || []);
+    const room = MAX_ISSUE_PHOTOS - issuePhotos.length;
+    issuePhotos = issuePhotos.concat(picked.slice(0, room));
+    syncIssueInputFiles();
+    renderIssuePhotos();
+    updateIssueUploadMode();
+    toggleIssueBoxVisibility();
+  });
+
+  function resetIssuePhotos(){
+    issuePhotos = [];
+    syncIssueInputFiles();
+    renderIssuePhotos();
+    updateIssueUploadMode();
+    toggleIssueBoxVisibility();
+  }
+
   updateIssueUploadMode();
+
+  // ---------- Batch code example modal ----------
+  const batchSampleThumb = document.getElementById('batchSampleThumb');
+  const batchSampleImg = batchSampleThumb.querySelector('img');
+  batchSampleThumb.addEventListener('click', () => openLightbox(batchSampleImg.src));
 
   // ---------- Batch code validation ----------
   // Format: Month(A-L) + Date(2 digits) + Plant(2) + Line(2) + Shift(1) = 8 alphanumeric characters.
@@ -1155,7 +1628,7 @@
   };
   const BATCH_RE = new RegExp('^([A-L])([0-9]{2})(' + Object.keys(PLANT_MASTER).join('|') + ')([A-Z0-9]{2})([A-Z0-9])$');
 
-  const MAX_ATTEMPTS = 5;
+  const MAX_ATTEMPTS = 3;
   const BATCH_FULL_LEN = 8;
   let batchAttemptsLeft = MAX_ATTEMPTS;
   let batchUnavailable = false; // true once the person tells us they don't have the code
@@ -1181,6 +1654,19 @@
   }
 
   const batchValidBadge = document.getElementById('batchValidBadge');
+  const batchPlantCode = document.getElementById('batchPlantCode');
+  const batchChar56 = document.getElementById('batchChar56');
+
+  // Backend-only: not shown to the person, just carries derived pieces of the
+  // 8-character batch code through to the ticket payload so Kapture/the backend
+  // don't have to re-parse the raw string.
+  //   - plant code: characters 4-5, e.g. "K1" out of "G28K1A1A"
+  //   - char56:     characters 5-6, e.g. "1A" out of "G28K1A1A"
+  function updateBatchDerivedFields(status){
+    const valid = status && status.valid;
+    batchPlantCode.value = (valid && status.plant) ? status.plant : '';
+    batchChar56.value = (valid && batchCode.value.length === BATCH_FULL_LEN) ? batchCode.value.substr(4, 2) : '';
+  }
 
   batchCode.addEventListener('input', () => {
     const clean = normalizeBatch(batchCode.value);
@@ -1188,9 +1674,11 @@
     batchValidBadge.hidden = true;
     if(clean.length < BATCH_FULL_LEN){
       showError(document.getElementById('fld-batchtext'), false);
+      updateBatchDerivedFields(null);
       return; // only judge once they've entered the complete code
     }
     const status = batchCodeStatus();
+    updateBatchDerivedFields(status);
     if(status.valid){
       showError(document.getElementById('fld-batchtext'), false);
       batchAttemptsEl.textContent = '';
@@ -1214,6 +1702,7 @@
     batchErrorEl.style.display = '';
     batchAttemptsEl.textContent = '';
     batchCode.value = '';
+    updateBatchDerivedFields(null);
     showError(document.getElementById('fld-batchtext'), false);
     batchCode.focus();
   });
@@ -1226,9 +1715,12 @@
     batchCode.required = false;
     batchCode.disabled = true;
     batchCode.value = '';
+    updateBatchDerivedFields(null);
     batchReqStar.hidden = true;
     batchRevertBtn.hidden = false;
-    // The batch code photo carries the requirement instead — it's already mandatory.
+    // The photo upload only appears once the person tells us they can't get the code —
+    // and once it's shown, it's mandatory (it's their only evidence of the batch).
+    document.getElementById('fld-batchimg').hidden = false;
   });
 
   batchRevertBtn.addEventListener('click', () => {
@@ -1238,8 +1730,254 @@
     batchCode.disabled = false;
     batchReqStar.hidden = false;
     batchRevertBtn.hidden = true;
+    document.getElementById('fld-batchimg').hidden = true;
     batchCode.focus();
   });
+
+  // ---------- "Issue is regarding": L1 -> L2 -> L3 category cascade ----------
+  // Optional. Sourced from the Kapture folder master (Quality / Non-Quality subtree
+  // of Task_Folder export) — TODO: replace this with a live fetch from that folder
+  // API once available so renamed/added categories don't need a code change.
+  // Quality has 3 levels (L1 > L2 > L3); Non-Quality is only 2 levels (L1 > L2),
+  // so the L3 dropdown simply stays hidden whenever the chosen L2 has no children.
+  // Small palette reused across categories so visually related issues cluster
+  // together at a glance, instead of every chip being a random unrelated color.
+  // color = active border/text; tint = active background.
+  const CAT_COLORS = {
+    purple: { color:'#8E44AD', tint:'#F4EAFB' },
+    teal:   { color:'#1E8E6E', tint:'#E3F7F1' },
+    orange: { color:'#E07A28', tint:'#FDF0E2' },
+    red:    { color:'#E30016', tint:'#FDECEA' },
+    pink:   { color:'#D6336C', tint:'#FCE8F0' },
+    blue:   { color:'#2F6FE4', tint:'#E9F1FF' },
+    cyan:   { color:'#0E8FA6', tint:'#E3F6F9' },
+    amber:  { color:'#B8860B', tint:'#FBF1DA' },
+    brown:  { color:'#8A5A2B', tint:'#F3E8DC' },
+    green:  { color:'#2E9E44', tint:'#E7F8EA' },
+    slate:  { color:'#5C6672', tint:'#EEF1F3' }
+  };
+
+  const ISSUE_TAXONOMY = {
+    "Quality": {
+      "id": "3552160",
+      "l2": {
+        "Foreign Elements": { "id": "3552161", emoji:'🔍', ...CAT_COLORS.purple, "l3": {
+          "Sediment": { id:"3552162", emoji:'🧪' }, "Insect like": { id:"3552163", emoji:'🐛' }, "Rubber like": { id:"3552164", emoji:'🟫' },
+          "Food like": { id:"3552165", emoji:'🍞' }, "Paper like": { id:"3552166", emoji:'📄' }, "Cloth, textile like": { id:"3552167", emoji:'🧵' },
+          "Capsule, drug, pills, tablet": { id:"3552168", emoji:'💊' }, "Other material": { id:"3552169", emoji:'❔' },
+          "Wood like": { id:"3552170", emoji:'🪵' }, "Plastic like": { id:"3552171", emoji:'🧴' }, "Glass like sample open": { id:"3552172", emoji:'🥛' },
+          "Glass like sample unopened": { id:"3552173", emoji:'🍾' }, "Suspended, floating material (floc)": { id:"3552174", emoji:'🌫️' },
+          "Mould or gelatine like": { id:"3552175", emoji:'🦠' }, "Tobacco, cigarette": { id:"3552176", emoji:'🚬' },
+          "Plastic Pouch": { id:"3552177", emoji:'🛍️' }, "Metal like": { id:"3552178", emoji:'🔩' }
+        }},
+        "Drink Characteristics": { "id": "3552179", emoji:'🥤', ...CAT_COLORS.teal, "l3": {
+          "Flat Taste": { id:"3552180", emoji:'🥱' }, "Off Colour": { id:"3552181", emoji:'🎨' }, "Off-taste/Odor": { id:"3552182", emoji:'👃' },
+          "MMPO Pulp related": { id:"3552183", emoji:'🍊' }
+        }},
+        "Packaging": { "id": "3552184", emoji:'📦', ...CAT_COLORS.orange, "l3": {
+          "Past BBD": { id:"3552185", emoji:'📅' }, "Spurious/Tampered": { id:"3552186", emoji:'🚫' }, "Bottle Burst": { id:"3552187", emoji:'💥' },
+          "Chipped necks": { id:"3552188", emoji:'🔺' }, "Bottle with deform shape": { id:"3552189", emoji:'🫙' },
+          "Date code / MRP not printed / illegible": { id:"3552190", emoji:'🔎' }, "Faulty Closure": { id:"3552191", emoji:'🔧' },
+          "Substandard Plastic quality": { id:"3552192", emoji:'♻️' }, "INCOMPLETE PACKAGING": { id:"3552193", emoji:'📭' },
+          "Leak Bottle": { id:"3552194", emoji:'💧' }, "Label Related": { id:"3552195", emoji:'🏷️' }, "Underfill/Empty": { id:"3552196", emoji:'📉' },
+          "Misbranding": { id:"3552197", emoji:'⚠️' }, "Excess Gas": { id:"3552198", emoji:'💨' }, "Rusty Necks": { id:"3552199", emoji:'🟠' },
+          "Dirty Container": { id:"3552200", emoji:'🧹' }
+        }},
+        "Health": { "id": "3552201", emoji:'⚕️', ...CAT_COLORS.red, "l3": {
+          "Illness, allergic reaction": { id:"3552202", emoji:'🤒' }
+        }}
+      }
+    },
+    "Non-Quality": {
+      "id": "3552203",
+      "l2": {
+        "Advertisement Complaints": { "id": "3552204", emoji:'📢', ...CAT_COLORS.pink, "l3": {} },
+        "Advertisement Query": { "id": "3552205", emoji:'📣', ...CAT_COLORS.pink, "l3": {} },
+        "Bonaqua Water Complaint": { "id": "3552206", emoji:'💧', ...CAT_COLORS.cyan, "l3": {} },
+        "Bonaqua Water Request": { "id": "3552207", emoji:'💧', ...CAT_COLORS.cyan, "l3": {} },
+        "Branding Request": { "id": "3552208", emoji:'🎨', ...CAT_COLORS.pink, "l3": {} },
+        "Complaint against Flash Bar Machine": { "id": "3552209", emoji:'🥤', ...CAT_COLORS.blue, "l3": {} },
+        "Different MRP": { "id": "3552210", emoji:'💲', ...CAT_COLORS.amber, "l3": {} },
+        "Distributor Complaint": { "id": "3552211", emoji:'🤝', ...CAT_COLORS.brown, "l3": {} },
+        "Distributorship Request": { "id": "3552212", emoji:'🤝', ...CAT_COLORS.brown, "l3": {} },
+        "Fountain Machine Complaint": { "id": "3552213", emoji:'🚰', ...CAT_COLORS.blue, "l3": {} },
+        "Fountain Machine Request": { "id": "3552214", emoji:'🚰', ...CAT_COLORS.blue, "l3": {} },
+        "Higher MRP": { "id": "3552215", emoji:'💲', ...CAT_COLORS.amber, "l3": {} },
+        "Ice Box Request": { "id": "3552216", emoji:'🧊', ...CAT_COLORS.cyan, "l3": {} },
+        "Invoice Related Complaint": { "id": "3552217", emoji:'🧾', ...CAT_COLORS.slate, "l3": {} },
+        "Kinley Water Complaint": { "id": "3552218", emoji:'💧', ...CAT_COLORS.cyan, "l3": {} },
+        "Kinley Water Request": { "id": "3552219", emoji:'💧', ...CAT_COLORS.cyan, "l3": {} },
+        "Local Promotions Complaint": { "id": "3552220", emoji:'🎉', ...CAT_COLORS.pink, "l3": {} },
+        "Local Promotions Enquiry": { "id": "3552221", emoji:'🎉', ...CAT_COLORS.pink, "l3": {} },
+        "Misc NPI": { "id": "3552222", emoji:'📦', ...CAT_COLORS.slate, "l3": {} },
+        "National Promotions Complaint": { "id": "3552223", emoji:'🎉', ...CAT_COLORS.pink, "l3": {} },
+        "National Promotions Enquiry": { "id": "3552224", emoji:'🎉', ...CAT_COLORS.pink, "l3": {} },
+        "New Outlet Request": { "id": "3552225", emoji:'🏬', ...CAT_COLORS.green, "l3": {} },
+        "Plant Tour": { "id": "3552226", emoji:'🏭', ...CAT_COLORS.slate, "l3": {} },
+        "Refund of Security Deposit": { "id": "3552227", emoji:'💰', ...CAT_COLORS.amber, "l3": {} },
+        "Request for Flash Bar Machine": { "id": "3552228", emoji:'🥤', ...CAT_COLORS.blue, "l3": {} },
+        "Retailer Malpractice": { "id": "3552229", emoji:'⚠️', ...CAT_COLORS.brown, "l3": {} },
+        "Sales / Service Complaint": { "id": "3552230", emoji:'🛠️', ...CAT_COLORS.brown, "l3": {} },
+        "SGA Complaint": { "id": "3552231", emoji:'📋', ...CAT_COLORS.slate, "l3": {} },
+        "SGA Request": { "id": "3552232", emoji:'📋', ...CAT_COLORS.slate, "l3": {} },
+        "Stock / Supply Complaint": { "id": "3552233", emoji:'📦', ...CAT_COLORS.brown, "l3": {} },
+        "Stock Supply Request": { "id": "3552234", emoji:'📦', ...CAT_COLORS.brown, "l3": {} },
+        "Stock Replacement": { "id": "3552235", emoji:'🔄', ...CAT_COLORS.brown, "l3": {} },
+        "Trade Scheme Complaint": { "id": "3552236", emoji:'🏷️', ...CAT_COLORS.pink, "l3": {} },
+        "Trade Scheme Inquiry": { "id": "3552237", emoji:'🏷️', ...CAT_COLORS.pink, "l3": {} },
+        "Vending Machine Complaint": { "id": "3552238", emoji:'🥤', ...CAT_COLORS.blue, "l3": {} },
+        "Vending Machine Request": { "id": "3552239", emoji:'🥤', ...CAT_COLORS.blue, "l3": {} }
+      }
+    }
+  };
+
+  const issueL1Row = document.getElementById('issueL1Row');
+  const issueL2Caption = document.getElementById('issueL2Caption');
+  const issueL2Row = document.getElementById('issueL2Row');
+  const issueL3Caption = document.getElementById('issueL3Caption');
+  const issueL3Row = document.getElementById('issueL3Row');
+  let issuePicked = { l1: '', l2: '', l3: '' };
+  let issueL2Expanded = false;
+
+  // Small decorative icons so the two top-level categories are easy to tell apart at a glance.
+  const ISSUE_L1_ICONS = {
+    'Quality': '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
+    'Non-Quality': '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16"/><path d="M4 5h13l-2.5 3.5L17 12H4"/></svg>'
+  };
+
+  // level: 'l1' | 'l2' | 'l3' — drives the size/shape via CSS ([data-lvl]) so each
+  // depth reads as visually distinct. color/tint (if given) are applied as CSS
+  // custom properties the stylesheet picks up for that specific category's hue.
+  function makeIssueChip(label, opts){
+    opts = opts || {};
+    const chip = document.createElement('div');
+    chip.className = 'issue-chip' + (opts.extraClass ? ' ' + opts.extraClass : '');
+    chip.setAttribute('role','option');
+    chip.setAttribute('tabindex','0');
+    if(opts.level) chip.dataset.lvl = opts.level;
+    if(opts.color){
+      chip.style.setProperty('--chip-color', opts.color);
+      chip.style.setProperty('--chip-tint', opts.tint || opts.color);
+    }
+    const markHtml = opts.emoji
+      ? '<span class="chip-emoji" aria-hidden="true">' + opts.emoji + '</span>'
+      : (opts.iconHtml || '');
+    chip.innerHTML = markHtml + '<span>' + label + '</span>';
+    return chip;
+  }
+
+  function renderIssueL1(){
+    issueL1Row.innerHTML = '';
+    Object.keys(ISSUE_TAXONOMY).forEach(name => {
+      const chip = makeIssueChip(name, { iconHtml: ISSUE_L1_ICONS[name], level:'l1' });
+      chip.classList.toggle('active', issuePicked.l1 === name);
+      chip.addEventListener('click', () => selectIssueL1(name));
+      chip.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectIssueL1(name); }});
+      issueL1Row.appendChild(chip);
+    });
+  }
+
+  function renderIssueL2(){
+    const l1 = ISSUE_TAXONOMY[issuePicked.l1];
+    if(!l1){ issueL2Row.hidden = true; issueL2Row.innerHTML = ''; issueL2Caption.hidden = true; return; }
+    const allNames = Object.keys(l1.l2);
+    const showAll = issueL2Expanded || allNames.length <= 10;
+    const namesToShow = showAll ? allNames : allNames.slice(0, 8);
+    issueL2Row.innerHTML = '';
+    namesToShow.forEach(name => {
+      const info = l1.l2[name];
+      const chip = makeIssueChip(name, { emoji: info.emoji, color: info.color, tint: info.tint, level:'l2' });
+      chip.classList.toggle('active', issuePicked.l2 === name);
+      chip.addEventListener('click', () => selectIssueL2(name));
+      chip.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectIssueL2(name); }});
+      issueL2Row.appendChild(chip);
+    });
+    if(!showAll){
+      const more = makeIssueChip('Show all ' + allNames.length, { extraClass:'issue-chip-more', level:'l2' });
+      more.addEventListener('click', () => { issueL2Expanded = true; renderIssueL2(); });
+      issueL2Row.appendChild(more);
+    } else if(allNames.length > 10){
+      const less = makeIssueChip('Show fewer', { extraClass:'issue-chip-more', level:'l2' });
+      less.addEventListener('click', () => { issueL2Expanded = false; renderIssueL2(); });
+      issueL2Row.appendChild(less);
+    }
+    issueL2Row.hidden = false;
+    issueL2Caption.hidden = false;
+  }
+
+  function renderIssueL3(){
+    const l1 = ISSUE_TAXONOMY[issuePicked.l1];
+    const l2 = l1 && l1.l2[issuePicked.l2];
+    const names = l2 ? Object.keys(l2.l3) : [];
+    issueL3Row.innerHTML = '';
+    if(!names.length){ issueL3Row.hidden = true; issueL3Caption.hidden = true; return; }
+    names.forEach(name => {
+      const info = l2.l3[name];
+      // L3 chips inherit their parent L2's color — the grouping stays obvious
+      // one level deeper, while each item still gets its own specific emoji.
+      const chip = makeIssueChip(name, { emoji: info.emoji, color: l2.color, tint: l2.tint, level:'l3' });
+      chip.classList.toggle('active', issuePicked.l3 === name);
+      chip.addEventListener('click', () => selectIssueL3(name));
+      chip.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectIssueL3(name); }});
+      issueL3Row.appendChild(chip);
+    });
+    issueL3Row.hidden = false;
+    issueL3Caption.hidden = false;
+  }
+
+  function selectIssueL1(name){
+    issuePicked = { l1: name, l2: '', l3: '' };
+    issueL2Expanded = false;
+    renderIssueL1();
+    renderIssueL2();
+    issueL3Row.hidden = true;
+    issueL3Row.innerHTML = '';
+    issueL3Caption.hidden = true;
+  }
+  function selectIssueL2(name){
+    issuePicked.l2 = name;
+    issuePicked.l3 = '';
+    renderIssueL2();
+    renderIssueL3();
+  }
+  function selectIssueL3(name){
+    issuePicked.l3 = name;
+    renderIssueL3();
+  }
+  function resetIssueRegarding(){
+    issuePicked = { l1: '', l2: '', l3: '' };
+    issueL2Expanded = false;
+    renderIssueL1();
+    issueL2Row.hidden = true; issueL2Row.innerHTML = ''; issueL2Caption.hidden = true;
+    issueL3Row.hidden = true; issueL3Row.innerHTML = ''; issueL3Caption.hidden = true;
+  }
+
+  // Returns the deepest level actually chosen, with its Kapture folder id — this id
+  // is what "in backend we need to maintain the folder id" refers to: it's what
+  // gets sent to Kapture so the ticket lands in the right folder/queue. Nothing
+  // here is shown to the person — "Issue is regarding" is a backend-only field,
+  // conveyed purely through which chips are highlighted.
+  function getIssueSelection(){
+    const path = [];
+    let folderId = '';
+    if(!issuePicked.l1) return { path, folderId: '', pathText: '' };
+    path.push(issuePicked.l1);
+    folderId = ISSUE_TAXONOMY[issuePicked.l1].id;
+
+    const l2 = issuePicked.l2 && ISSUE_TAXONOMY[issuePicked.l1].l2[issuePicked.l2];
+    if(l2){
+      path.push(issuePicked.l2);
+      folderId = l2.id;
+      const l3Entry = issuePicked.l3 && l2.l3[issuePicked.l3];
+      if(l3Entry){
+        path.push(issuePicked.l3);
+        folderId = l3Entry.id;
+      }
+    }
+    return { path, folderId, pathText: path.join(' > ') };
+  }
+
+  renderIssueL1();
 
   // ---------- Word-limited description ----------
   const issueDesc = document.getElementById('issueDesc');
@@ -1272,8 +2010,6 @@
       const phoneFilled = /^\d{10}$/.test(phone.value);
       const phoneOk = phoneFilled && phoneVerified;
       const contactOk = emailOk || phoneOk;
-
-      contactHint.classList.toggle('err-emphasis', !contactOk);
 
       if(emailFilled && !emailOk){
         showError(document.getElementById('fld-email'), true);
@@ -1309,9 +2045,13 @@
       showError(document.getElementById('fld-batchtext'), !batchTextOk);
       valid = valid && batchTextOk;
 
-      const batchImgOk = document.getElementById('batchImage').files.length > 0;
-      showError(document.getElementById('fld-batchimg'), !batchImgOk);
-      valid = valid && batchImgOk;
+      // Photo of the batch code is only asked for (and only required) once the
+      // person has told us they can't give us the text code.
+      if(batchUnavailable){
+        const batchImgOk = document.getElementById('batchImage').files.length > 0;
+        showError(document.getElementById('fld-batchimg'), !batchImgOk);
+        valid = valid && batchImgOk;
+      }
     }
 
     if(n === 3){
@@ -1371,7 +2111,7 @@
   }
 
   // Maps this form's fields onto the exact request body Kapture's Add Ticket API expects.
-  function buildTicketPayload(issueImageUrl, batchImageUrl){
+  function buildTicketPayload(issueImageUrl, batchImageUrl, recaptchaToken){
     const finalBatchStatus = batchCodeStatus();
     const brandSize = document.getElementById('brandSize').value.trim();
     const name = document.getElementById('fullName').value.trim();
@@ -1380,6 +2120,9 @@
     const idVal = empIdInput.value.trim();
     const desc = issueDesc.value.trim();
     const batchVal = batchUnavailable ? '' : document.getElementById('batchCode').value.trim();
+    const plantCodeVal = batchPlantCode.value.trim();
+    const char56Val = batchChar56.value.trim();
+    const issueSelection = getIssueSelection();
 
     let ticketDetails = name + (role ? ' (' + role + ')' : '') + ' reported an issue with ' + (brandSize || 'an HCCB product') + ': ' + desc;
     if(batchUnavailable){
@@ -1398,16 +2141,28 @@
       email_id: emailField.value.trim(),
       address: cityVal,
       reopen_details: '',
+      // Kapture routes tickets into folders by id — this is the deepest L1/L2/L3
+      // node the person picked (falls back up a level if L2/L3 weren't reached).
+      // TODO: confirm "folder_id" is the exact field name Kapture's API expects.
+      // Verify this server-side (Google siteverify) before creating the ticket —
+      // see the comment on RECAPTCHA_SITE_KEY at the top of the file. Do NOT
+      // trust a submission just because this field is present/non-empty.
+      recaptcha_token: recaptchaToken || '',
+      folder_id: issueSelection.folderId,
       webform: {
         'are_you_a_?': role,
         'batchcode': batchVal,
+        'batch_plant_code': plantCodeVal, // decoded from the batch code, e.g. "K1"
+        'batch_char_5_6': char56Val, // characters 5-6 of the 8-character batch code
         'issue_with_brand_size': 'Yes',
         'brand,_size': brandSize,
         'upload_image_of_the_issue': issueImageUrl || '',
         'batchcode_image': batchImageUrl || '',
         'city': cityVal,
         'enter_your_distributor/retailer/emp_id?': idVal,
-        'issue_description': desc
+        'issue_description': desc,
+        'issue_is_regarding': issueSelection.pathText,
+        'issue_regarding_folder_id': issueSelection.folderId
       }
     }];
   }
@@ -1432,13 +2187,29 @@
     submitErrorEl.hidden = true;
 
     try {
-      const issueFile = document.getElementById('issueImage').files[0];
-      const batchFile = batchUnavailable ? null : document.getElementById('batchImage').files[0];
-      const [issueImageUrl, batchImageUrl] = await Promise.all([
-        uploadImageAndGetUrl(issueFile),
-        uploadImageAndGetUrl(batchFile)
-      ]);
-      const body = buildTicketPayload(issueImageUrl, batchImageUrl);
+      const recaptchaToken = await window.getRecaptchaToken();
+      const recaptchaConfigured = window.RECAPTCHA_SITE_KEY && window.RECAPTCHA_SITE_KEY.indexOf('YOUR_') !== 0;
+      // Only hard-block here once a real site key is in place — while
+      // RECAPTCHA_SITE_KEY is still the placeholder, don't stop genuine
+      // users from testing the form. Once configured, the backend is the
+      // real gate either way (see buildTicketPayload / recaptcha_token).
+      if(recaptchaConfigured && !recaptchaToken){
+        submitErrorEl.textContent = "We couldn't verify you're not a robot. Please try submitting again.";
+        submitErrorEl.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit report';
+        return;
+      }
+
+      const issueImageUrls = [];
+      for(const file of issuePhotos){
+        issueImageUrls.push(await uploadImageAndGetUrl(file));
+      }
+      // The batch-code photo field only appears once the customer has said they
+      // don't have the code to type in — otherwise there's nothing to upload here.
+      const batchImgFile = document.getElementById('batchImage').files[0];
+      const batchImageUrl = batchImgFile ? await uploadImageAndGetUrl(batchImgFile) : '';
+      const body = buildTicketPayload(issueImageUrls.join(', '), batchImageUrl, recaptchaToken);
 
       const res = await fetch(TICKET_API_ENDPOINT, {
         method: 'POST',
@@ -1456,6 +2227,7 @@
       successCard.classList.add('show');
     } catch(err){
       console.error('Ticket submission failed:', err);
+      submitErrorEl.textContent = 'Something went wrong sending your report. Please check your connection and try again.';
       submitErrorEl.hidden = false;
       submitBtn.disabled = false;
       submitBtn.textContent = 'Submit report';
@@ -1479,11 +2251,14 @@
     batchCode.disabled = false;
     batchReqStar.hidden = false;
     batchRevertBtn.hidden = true;
+    document.getElementById('fld-batchimg').hidden = true;
     batchFallback.classList.remove('show');
     batchErrorEl.style.display = '';
     batchAttemptsEl.textContent = '';
     batchValidBadge.hidden = true;
+    updateBatchDerivedFields(null);
     wordCounter.textContent = '0 / 100 words';
+    resetIssueRegarding();
     submitBtn.disabled = false;
     submitBtn.textContent = 'Submit report';
     submitErrorEl.hidden = true;
@@ -1491,6 +2266,7 @@
     formWrap.hidden = false;
     updateContactRequirement();
     resetBrandPicker();
+    resetIssuePhotos();
     goToStep(1);
   });
 
@@ -1498,3 +2274,4 @@
 </script>
 </body>
 </html>
+
