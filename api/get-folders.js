@@ -1,25 +1,31 @@
 // POST /api/get-folders
 //
 // Proxies Kapture's "get folders by level" endpoint (used to populate the
-// "Issue is regarding" L1 -> L2 -> L3 picker) so the browser never needs
-// Kapture's internal admin session directly.
+// "Issue is regarding" L1 -> L2 -> L3 picker) so the browser never talks to
+// Kapture's internal endpoint directly.
 //
 //   Real endpoint:
 //   POST https://cokebuddy.kapturecrm.com/ms/ticket-configuration/ticket-configuration/get-folders-by-level
 //
-// IMPORTANT CAVEAT: unlike the ticket-creation endpoint (which uses a plain
-// Authorization: Basic header), this folder endpoint was captured from an
-// authenticated *admin browser session* — its only real credential is the
-// session cookie (JSESSIONID / _KSID / etc). Session cookies expire and are
-// tied to a login, so this is inherently more fragile than a proper API key:
-//   - Whoever generates KAPTURE_ADMIN_SESSION_COOKIE must stay logged in /
-//     periodically refresh it, or this endpoint will start failing.
-//   - Ask your Kapture account rep whether there's a proper long-lived API
-//     token for folder configuration reads — that would be far more robust
-//     than smuggling through a staff session cookie.
+// NOTE ON AUTH: the curl you captured for this endpoint has no Authorization
+// header and no Cookie header — just Origin/Referer/Sec-Fetch-* headers,
+// which browsers add automatically and can't really be "faked" as a
+// credential. Two real possibilities:
+//   1. This endpoint is only reachable from inside Kapture's own domain/admin
+//      panel (i.e. it checks Origin/Referer rather than a token), in which
+//      case a server-to-server call like this one may get rejected even with
+//      headers matched exactly — that's normal for internal-only endpoints,
+//      not a bug in this file.
+//   2. Your browser WAS sending a session cookie, but whatever tool exported
+//      this curl stripped it out (some "copy as curl" options omit cookies
+//      by default for security). If so, open your browser's DevTools →
+//      Network tab, find this same request, open its Headers, and check if
+//      there's a "Cookie:" line you didn't get in the plain curl export.
 //
-// Frontend calls this with { level, parentFolderId? }. We translate that
-// into the shape Kapture expects and relay the response back as-is.
+// This proxy is written to try WITHOUT any cookie first (matching your curl
+// exactly). If Kapture responds 401/403, that confirms case 2 — set
+// KAPTURE_ADMIN_SESSION_COOKIE in Vercel and this file will start sending it
+// automatically; no code changes needed either way.
 
 const KAPTURE_FOLDERS_URL = 'https://cokebuddy.kapturecrm.com/ms/ticket-configuration/ticket-configuration/get-folders-by-level';
 
@@ -27,12 +33,6 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const sessionCookie = process.env.KAPTURE_ADMIN_SESSION_COOKIE;
-  if (!sessionCookie) {
-    console.error('KAPTURE_ADMIN_SESSION_COOKIE is not set in environment variables');
-    return res.status(500).json({ error: 'Server is not configured correctly' });
   }
 
   const { level, parentFolderId } = req.body || {};
@@ -50,18 +50,26 @@ export default async function handler(req, res) {
     kaptureBody.parentFolderId = parentFolderId;
   }
 
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/plain, */*',
+    // Matches your curl — harmless to include, and some backends do check these.
+    'Origin': 'https://cokebuddy.kapturecrm.com',
+    'Referer': 'https://cokebuddy.kapturecrm.com/nui/configurations/ticket/folder',
+    'X-KapTrace-ID': crypto.randomUUID(),
+    'X-Request-Time': String(Date.now())
+  };
+
+  // Only added if you've set it — see the note above about whether this is
+  // actually needed. Leaving it unset matches your curl exactly.
+  if (process.env.KAPTURE_ADMIN_SESSION_COOKIE) {
+    headers['Cookie'] = process.env.KAPTURE_ADMIN_SESSION_COOKIE;
+  }
+
   try {
     const kaptureRes = await fetch(KAPTURE_FOLDERS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/plain, */*',
-        'Cookie': sessionCookie,
-        // Kapture's own frontend sends these trace/timing headers — harmless
-        // to include, and matches what a real browser session would send.
-        'X-KapTrace-ID': crypto.randomUUID(),
-        'X-Request-Time': String(Date.now())
-      },
+      headers,
       body: JSON.stringify(kaptureBody)
     });
 
@@ -75,12 +83,9 @@ export default async function handler(req, res) {
 
     if (!kaptureRes.ok) {
       console.error('Kapture folders API error:', kaptureRes.status, rawText);
-      // A 401/403 here almost always means the session cookie has expired —
-      // surface that distinctly so it's easy to diagnose from the frontend's
-      // console instead of looking like a generic failure.
       return res.status(502).json({
-        error: kaptureRes.status === 401 || kaptureRes.status === 403
-          ? 'Kapture session appears to have expired — refresh KAPTURE_ADMIN_SESSION_COOKIE'
+        error: (kaptureRes.status === 401 || kaptureRes.status === 403)
+          ? 'Kapture rejected this as unauthenticated — this endpoint likely needs a session cookie after all; see this file\'s top comment for how to capture one from DevTools, then set KAPTURE_ADMIN_SESSION_COOKIE'
           : 'Kapture rejected the folder request',
         status: kaptureRes.status,
         details: kaptureData
