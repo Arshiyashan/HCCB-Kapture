@@ -28,8 +28,11 @@ export default async function handler(req, res) {
 
   const otpKey = process.env.KAPTURE_OTP_KEY;
   if (!otpKey) {
-    console.error('KAPTURE_OTP_KEY is not set in environment variables');
-    return res.status(500).json({ error: 'Server is not configured correctly' });
+    // Not an error exactly — just means real SMS delivery hasn't been wired
+    // up yet. 501 (Not Implemented) lets the frontend tell the two cases
+    // apart and show a calm "still in demo mode" message instead of an
+    // alarming "something broke" one.
+    return res.status(501).json({ error: 'OTP key not configured yet — still in demo mode' });
   }
 
   const { phone, ticketId } = req.body || {};
