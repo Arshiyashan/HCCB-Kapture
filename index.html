@@ -1174,7 +1174,6 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: phone.value.trim() })
     });
-    if(res.status === 501) return { notConfigured: true };
     if(!res.ok) throw new Error('send-otp responded with status ' + res.status);
     return res.json().catch(() => ({}));
   }
@@ -1185,10 +1184,11 @@
     sendOtpBtn.disabled = true;
     otpMsg.textContent = 'Sending code to +91 ' + phone.value + '…';
     try {
-      const result = await sendRealOtp();
-      otpMsg.textContent = result.notConfigured
-        ? 'Demo mode — use code 123456 to verify. (Live SMS delivery goes live once the SMS vendor is connected.)'
-        : 'Code sent to +91 ' + phone.value + '. (Verification is still demo mode — enter 123456.)';
+      await sendRealOtp();
+      // Verification itself is still demo mode until Kapture's verify-otp
+      // endpoint is available — say so plainly rather than pretending
+      // any 6-digit code the carrier delivers will work here.
+      otpMsg.textContent = 'Code sent to +91 ' + phone.value + '. (Verification is still demo mode — enter 123456.)';
     } catch(err){
       console.error('send-otp failed:', err);
       otpMsg.textContent = 'Could not send the code — demo mode active, use 123456 to verify.';
@@ -1217,10 +1217,8 @@
   resendBtn.addEventListener('click', async () => {
     otpMsg.textContent = 'Sending a new code…';
     try {
-      const result = await sendRealOtp();
-      otpMsg.textContent = result.notConfigured
-        ? 'New code sent (demo mode — use 123456).'
-        : 'New code sent. (Verification is still demo mode — enter 123456.)';
+      await sendRealOtp();
+      otpMsg.textContent = 'New code sent. (Verification is still demo mode — enter 123456.)';
     } catch(err){
       console.error('resend send-otp failed:', err);
       otpMsg.textContent = 'Could not resend — demo mode active, use 123456 to verify.';
@@ -2456,3 +2454,6 @@
 </script>
 </body>
 </html>
+apps-fileview.texmex_20260826.10_p0
+index (4).html
+Displaying index (4).html.
