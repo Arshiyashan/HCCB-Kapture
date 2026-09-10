@@ -20,10 +20,19 @@ export default async function handler(req, res) {
   }
 
   // req.body is already parsed to JSON by Vercel when Content-Type: application/json
+  //
+  // CONFIRMED shape from a real working curl: a single JSON OBJECT at the top
+  // level (title, ticket_details, due_date, phone, email_id, flow_id, webform),
+  // where "webform" is itself an ARRAY containing one object of form fields.
+  // This is different from earlier guesses that wrapped the whole thing in an
+  // outer array — that was wrong, this is the confirmed real shape.
   const ticketPayload = req.body;
 
-  if (!Array.isArray(ticketPayload) || ticketPayload.length === 0) {
-    return res.status(400).json({ error: 'Request body must be a non-empty array' });
+  if (!ticketPayload || typeof ticketPayload !== 'object' || Array.isArray(ticketPayload)) {
+    return res.status(400).json({ error: 'Request body must be a single JSON object (not an array)' });
+  }
+  if (!Array.isArray(ticketPayload.webform) || ticketPayload.webform.length === 0) {
+    return res.status(400).json({ error: 'Request body must include a non-empty "webform" array' });
   }
 
   try {
@@ -59,7 +68,6 @@ export default async function handler(req, res) {
       kaptureData?.ticket_id ||
       kaptureData?.id ||
       kaptureData?.data?.ticket_id ||
-      kaptureData?.[0]?.ticket_id ||
       null;
 
     return res.status(200).json({ ...kaptureData, ticket_id: ticketId });
