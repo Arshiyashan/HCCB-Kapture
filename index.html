@@ -1819,7 +1819,9 @@
     });
     if(!res.ok) throw new Error('Folder API responded with status ' + res.status);
     const payload = await res.json();
-    const list = Array.isArray(payload) ? payload : (payload.data || payload.result || []);
+    // CONFIRMED real response shape: { maxLevel, status, message, dataList: [...] }
+    // — folders live under "dataList", not "data"/"result" like an earlier guess assumed.
+    const list = Array.isArray(payload) ? payload : (payload.dataList || payload.data || payload.result || []);
     return list.map(parseFolderRecord).filter(f => f.id != null && f.name);
   }
 
