@@ -1,24 +1,19 @@
-// POST /api/send-otp
+// api/send-otp.js
 //
-// Proxies Kapture's OTP-send endpoint so the secret "key" value never ships
-// inside the public form's browser code.
-//
-//   Real endpoint:
+// Proxies Kapture's noauth Send OTP API:
 //   POST https://cokebuddy.kapturecrm.com/ms/ticket-action/noauth/send-otp
 //   Body: { key, phone, ticketId }
 //
-// The endpoint is marked "noauth" on Kapture's side, meaning it doesn't need
-// a logged-in session — just the "key" value (store this in
-// KAPTURE_OTP_KEY). That makes this proxy simpler and more robust than
-// get-folders.js, which does depend on a fragile admin session cookie.
+// The secret `key` lives only in the KAPTURE_OTP_KEY env var (Vercel →
+// Settings → Environment Variables) and never reaches the browser.
 //
-// NOTE: this wires up SENDING the OTP for real. Verifying the code the
-// customer types back in still needs its own Kapture endpoint — you hadn't
-// given me that one yet, so index.html's verify step still checks for the
-// demo code 123456. Send me that verify-otp curl whenever you have it and
-// I'll wire the other half up the same way.
-
-const KAPTURE_SEND_OTP_URL = 'https://cokebuddy.kapturecrm.com/ms/ticket-action/noauth/send-otp';
+// NOTE: Kapture's exact success/failure response shape for this endpoint
+// hasn't been fully confirmed yet (we only have one working sample). This
+// checks the HTTP status plus any explicit `status`/`success` field in the
+// body, and falls back to res.ok if neither is present. If sends start
+// failing unexpectedly, check DevTools → Network → this request's
+// Response/Preview tab (same trick that caught the get-folders `dataList`
+// issue) and adjust the `success` check below.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -26,51 +21,49 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const otpKey = process.env.KAPTURE_OTP_KEY;
-  if (!otpKey) {
-    // Not an error exactly — just means real SMS delivery hasn't been wired
-    // up yet. 501 (Not Implemented) lets the frontend tell the two cases
-    // apart and show a calm "still in demo mode" message instead of an
-    // alarming "something broke" one.
-    return res.status(501).json({ error: 'OTP key not configured yet — still in demo mode' });
+  const KAPTURE_OTP_KEY = process.env.KAPTURE_OTP_KEY;
+  if (!KAPTURE_OTP_KEY) {
+    // Calm, expected fallback — the frontend treats this specific status as
+    // "demo mode", not an alarming failure.
+    return res.status(501).json({ error: 'OTP key not configured' });
   }
 
   const { phone, ticketId } = req.body || {};
   if (!phone || !/^\d{10}$/.test(String(phone))) {
-    return res.status(400).json({ error: 'Request body must include a valid 10-digit "phone"' });
+    return res.status(400).json({ error: 'A valid 10-digit phone number is required' });
   }
 
   try {
-    const kaptureRes = await fetch(KAPTURE_SEND_OTP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        key: otpKey,
-        phone: String(phone),
-        ticketId: ticketId || ''
-      })
-    });
+    const kaptureRes = await fetch(
+      'https://cokebuddy.kapturecrm.com/ms/ticket-action/noauth/send-otp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: KAPTURE_OTP_KEY,
+          phone: String(phone),
+          ticketId: ticketId || ''
+        })
+      }
+    );
 
-    const rawText = await kaptureRes.text();
-    let kaptureData;
+    const text = await kaptureRes.text();
+    let data;
     try {
-      kaptureData = JSON.parse(rawText);
+      data = JSON.parse(text);
     } catch {
-      kaptureData = { raw: rawText };
+      data = { raw: text };
     }
 
-    if (!kaptureRes.ok) {
-      console.error('Kapture send-otp error:', kaptureRes.status, rawText);
-      return res.status(502).json({
-        error: 'Kapture rejected the OTP request',
-        status: kaptureRes.status,
-        details: kaptureData
-      });
+    const success = kaptureRes.ok && data.status !== false && data.success !== false;
+
+    if (!success) {
+      return res.status(502).json({ success: false, error: 'Kapture rejected the OTP send request', details: data });
     }
 
-    return res.status(200).json(kaptureData);
+    return res.status(200).json({ success: true, details: data });
   } catch (err) {
-    console.error('Failed to reach Kapture send-otp API:', err);
-    return res.status(502).json({ error: 'Could not reach Kapture OTP API' });
+    console.error('send-otp error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to reach Kapture', message: err.message });
   }
 }
