@@ -1158,11 +1158,54 @@
     updateContactRequirement();
   });
 
-  sendOtpBtn.addEventListener('click', () => {
+  // Backend proxies for Kapture's noauth send-otp / verify-otp APIs. Both
+  // hold the real KAPTURE_OTP_KEY server-side; the browser never sees it.
+  const SEND_OTP_ENDPOINT = '/api/send-otp';
+  const VERIFY_OTP_ENDPOINT = '/api/verify-otp';
+
+  // Calls /api/send-otp. Returns true on success (or on the calm 501
+  // "not configured yet" fallback), false if the send genuinely failed.
+  async function sendOtpRequest(){
+    sendOtpBtn.disabled = true;
+    otpMsg.style.color = '';
+    otpMsg.textContent = 'Sending code…';
+    try{
+      const res = await fetch(SEND_OTP_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.value.trim() })
+      });
+
+      if(res.status === 501){
+        // KAPTURE_OTP_KEY isn't set on this deployment yet — calm fallback,
+        // not an alarming error, so the rest of the form stays testable.
+        otpMsg.textContent = 'Demo mode — use code 123456 to verify. (Live SMS delivery goes live once the SMS vendor is connected.)';
+        return true;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if(!res.ok || data.success === false){
+        otpMsg.style.color = 'var(--danger)';
+        otpMsg.textContent = 'Couldn\'t send the code. Please check the number and try again.';
+        return false;
+      }
+
+      otpMsg.textContent = 'Code sent to +91 ' + phone.value + '.';
+      return true;
+    }catch(err){
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.textContent = 'Network error while sending the code. Please try again.';
+      return false;
+    }finally{
+      sendOtpBtn.disabled = false;
+    }
+  }
+
+  sendOtpBtn.addEventListener('click', async () => {
     otpBlock.classList.add('show');
     otpInput.value = '';
-    otpMsg.textContent = 'Demo mode — use code 123456 to verify. A code has been "sent" to +91 ' + phone.value + '.';
-    startResendTimer();
+    const ok = await sendOtpRequest();
+    if(ok) startResendTimer();
   });
 
   function startResendTimer(){
@@ -1181,15 +1224,50 @@
       }
     }, 1000);
   }
-  resendBtn.addEventListener('click', () => {
-    otpMsg.textContent = 'New code sent (demo mode — use 123456).';
-    startResendTimer();
+  resendBtn.addEventListener('click', async () => {
+    const ok = await sendOtpRequest();
+    if(ok) startResendTimer();
   });
 
-  verifyOtpBtn.addEventListener('click', () => {
-    if(otpInput.value.trim() === '123456'){
+  verifyOtpBtn.addEventListener('click', async () => {
+    const code = otpInput.value.trim();
+    if(!code){
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.textContent = 'Enter the code you received.';
+      return;
+    }
+
+    verifyOtpBtn.disabled = true;
+    otpMsg.style.color = '';
+    otpMsg.textContent = 'Verifying…';
+
+    let verified = false;
+    try{
+      const res = await fetch(VERIFY_OTP_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.value.trim(), otp: code })
+      });
+
+      if(res.status === 501){
+        // Same calm fallback as send: no live key configured yet, so accept
+        // the documented demo code instead of blocking the whole form.
+        verified = code === '123456';
+      } else {
+        const data = await res.json().catch(() => ({}));
+        verified = res.ok && data.verified === true;
+      }
+    }catch(err){
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.textContent = 'Network error while verifying. Please try again.';
+      verifyOtpBtn.disabled = false;
+      return;
+    }
+
+    if(verified){
       phoneVerified = true;
       verifiedBadge.hidden = false;
+      otpMsg.style.color = '';
       otpMsg.textContent = 'Phone number verified.';
       phone.readOnly = true;
       sendOtpBtn.disabled = true;
@@ -1197,9 +1275,10 @@
       showError(document.getElementById('fld-phone'), false);
       updateContactRequirement();
     } else {
-      otpMsg.textContent = 'That code isn\'t right — try 123456 in this demo.';
       otpMsg.style.color = 'var(--danger)';
+      otpMsg.textContent = 'That code isn\'t right. Please try again.';
     }
+    verifyOtpBtn.disabled = false;
   });
   updateContactRequirement();
 
@@ -2466,6 +2545,7 @@
       phone: phone.value.trim(),
       email_id: emailField.value.trim(),
       flow_id: FLOW_ID,
+      disposition_id: issueSelection.folderId, // deepest folder chosen in the "Issue is regarding" L1→L2→L3 picker
       webform: [{
         'are_you_a_?': role,
         'batchcode': batchVal,
